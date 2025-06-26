@@ -38,11 +38,10 @@ const userSchema = new mongoose.Schema({
       ref: "Order",
     },
   ],
-  // THÊM TRƯỜNG ROLE MỚI
   role: {
     type: String,
-    enum: ['user', 'admin'], // Chỉ chấp nhận 'user' hoặc 'admin'
-    default: 'user', // Mặc định là 'user'
+    enum: ['user', 'admin'], 
+    default: 'user', 
   },
   createdAt: {
     type: Date,
