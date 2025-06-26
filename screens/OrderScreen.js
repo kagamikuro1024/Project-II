@@ -1,4 +1,13 @@
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, Image, Pressable, Platform } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  SafeAreaView,
+  ScrollView,
+  Image,
+  Pressable,
+  Platform,
+} from "react-native";
 import React, { useEffect } from "react";
 import LottieView from "lottie-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -6,8 +15,11 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 const OrderScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { cartItems, totalPrice, shippingAddress, paymentMethod } = route.params || {};
+  // Lấy thông tin đơn hàng từ tham số route
+  const { cartItems, totalPrice, shippingAddress, paymentMethod } =
+    route.params || {};
 
+  // Chuyển hướng về màn hình chính
   const handleGoToMain = () => {
     navigation.replace("Main");
   };
@@ -21,7 +33,7 @@ const OrderScreen = () => {
       }}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Lottie Animation: Thumbs Up */}
+        {/* Hoạt ảnh Lottie: Thumbs Up */}
         <LottieView
           source={require("../assets/thumbs.json")}
           style={styles.lottieThumbs}
@@ -33,7 +45,7 @@ const OrderScreen = () => {
           Your Order Has Been Received!
         </Text>
 
-        {/* Lottie Animation: Sparkle */}
+        {/* Hoạt ảnh Lottie: Sparkle */}
         <LottieView
           source={require("../assets/sparkle.json")}
           style={styles.lottieSparkle}
@@ -42,7 +54,7 @@ const OrderScreen = () => {
           speed={0.7}
         />
 
-        {/* Order Summary Section */}
+        {/* Phần tóm tắt đơn hàng */}
         {cartItems && (
           <View style={styles.orderSummaryCard}>
             <Text style={styles.sectionTitle}>Order Details</Text>
@@ -79,7 +91,7 @@ const OrderScreen = () => {
           </View>
         )}
 
-        {/* Purchased Items List */}
+        {/* Danh sách các mặt hàng đã mua */}
         {cartItems && cartItems.length > 0 && (
           <View style={styles.purchasedItemsCard}>
             <Text style={styles.sectionTitle}>Items Purchased</Text>
@@ -102,7 +114,7 @@ const OrderScreen = () => {
           </View>
         )}
 
-        {/* Go to Main Screen Button */}
+        {/* Nút "Tiếp tục mua sắm" */}
         <Pressable onPress={handleGoToMain} style={styles.goToMainButton}>
           <Text style={styles.goToMainButtonText}>Continue Shopping</Text>
         </Pressable>
@@ -249,7 +261,7 @@ const styles = StyleSheet.create({
     color: "#008397",
   },
   goToMainButton: {
-    backgroundColor: "#00CED1", // Màu xanh Aqua
+    backgroundColor: "#00CED1",
     padding: 15,
     borderRadius: 8,
     justifyContent: "center",

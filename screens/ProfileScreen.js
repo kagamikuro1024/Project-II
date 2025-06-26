@@ -21,9 +21,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons, AntDesign, Feather } from "@expo/vector-icons";
 import axios from "axios";
 import { UserType } from "../UserContext";
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
-// For user's API calls, you might want a separate API file like '../api/userApi.js'
-// For now, directly making axios calls with token.
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ProfileScreen = () => {
   const { userId, setUserId } = useContext(UserType);
@@ -32,7 +30,7 @@ const ProfileScreen = () => {
   const [user, setUser] = useState(null);
   const navigation = useNavigation();
 
-  // Configure header
+  // Cấu hình tiêu đề màn hình
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: "",
@@ -58,23 +56,25 @@ const ProfileScreen = () => {
     });
   }, [navigation]);
 
-  // Common authentication error handler
-  const handleAuthError = useCallback((error) => {
-    console.error("Authentication error:", error.response?.data || error.message);
-    Alert.alert(
-      "Session Expired",
-      "Your session has expired or is invalid. Please log in again."
-    );
-    // Clear token and redirect to login screen
-    AsyncStorage.removeItem("authToken")
-      .then(() => {
-        setUserId(null);
-        navigation.replace("Login");
-      })
-      .catch((err) => console.error("Error clearing token:", err));
-  }, [navigation, setUserId]);
+  // Xử lý lỗi xác thực và đăng xuất
+  const handleAuthError = useCallback(
+    (error) => {
+      Alert.alert(
+        "Session Expired",
+        "Your session has expired or is invalid. Please log in again."
+      );
+      // Xóa token và chuyển hướng đến màn hình đăng nhập
+      AsyncStorage.removeItem("authToken")
+        .then(() => {
+          setUserId(null);
+          navigation.replace("Login");
+        })
+        .catch((err) => console.error("Error clearing token:", err));
+    },
+    [navigation, setUserId]
+  );
 
-  // Fetch User Profile
+  // Lấy thông tin hồ sơ người dùng
   const fetchUserProfile = useCallback(async () => {
     if (!userId) {
       setLoading(false);
@@ -87,6 +87,7 @@ const ProfileScreen = () => {
         return;
       }
 
+      // Gửi yêu cầu lấy thông tin người dùng
       const response = await axios.get(
         `http://10.0.2.2:8000/profile/${userId}`,
         {
@@ -97,16 +98,16 @@ const ProfileScreen = () => {
       );
       setUser(response.data.user);
     } catch (error) {
+      // Xử lý lỗi xác thực hoặc lỗi khác
       if (error.response?.status === 401 || error.response?.status === 403) {
         handleAuthError(error);
       } else {
-        console.error("Error fetching user profile:", error);
         Alert.alert("Error", "Failed to load profile information.");
       }
     }
   }, [userId, handleAuthError]);
 
-  // Fetch Orders
+  // Lấy danh sách đơn hàng
   const fetchOrders = useCallback(async () => {
     if (!userId) {
       setLoading(false);
@@ -121,6 +122,7 @@ const ProfileScreen = () => {
         return;
       }
 
+      // Gửi yêu cầu lấy đơn hàng
       const response = await axios.get(
         `http://10.0.2.2:8000/orders/${userId}`,
         {
@@ -129,16 +131,16 @@ const ProfileScreen = () => {
           },
         }
       );
-      // Sort orders from newest to oldest based on createdAt
+      // Sắp xếp đơn hàng theo ngày tạo mới nhất
       const sortedOrders = response.data.orders.sort((a, b) => {
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
       setOrders(sortedOrders);
     } catch (error) {
+      // Xử lý lỗi xác thực hoặc lỗi khác
       if (error.response?.status === 401 || error.response?.status === 403) {
         handleAuthError(error);
       } else {
-        console.error("Error fetching orders:", error);
         setOrders([]);
         Alert.alert("Error", "Failed to load order list.");
       }
@@ -147,7 +149,7 @@ const ProfileScreen = () => {
     }
   }, [userId, handleAuthError]);
 
-  // Handle Cancel Order (NEW)
+  // Xử lý hủy đơn hàng
   const handleCancelOrder = async (orderId) => {
     Alert.alert(
       "Cancel Order",
@@ -164,9 +166,10 @@ const ProfileScreen = () => {
                 return;
               }
 
+              // Gửi yêu cầu hủy đơn hàng
               const response = await axios.put(
                 `http://10.0.2.2:8000/orders/cancel/${orderId}`,
-                {}, // No body needed for this specific cancel API
+                {},
                 {
                   headers: {
                     Authorization: `Bearer ${token}`,
@@ -176,16 +179,26 @@ const ProfileScreen = () => {
 
               if (response.status === 200) {
                 Alert.alert("Success", "Order cancelled successfully!");
-                fetchOrders(); // Re-fetch orders to update status
+                fetchOrders(); // Tải lại danh sách đơn hàng để cập nhật trạng thái
               } else {
-                Alert.alert("Error", response.data.message || "Failed to cancel order.");
+                Alert.alert(
+                  "Error",
+                  response.data.message || "Failed to cancel order."
+                );
               }
             } catch (error) {
-              if (error.response?.status === 401 || error.response?.status === 403) {
+              // Xử lý lỗi xác thực hoặc lỗi khác
+              if (
+                error.response?.status === 401 ||
+                error.response?.status === 403
+              ) {
                 handleAuthError(error);
               } else {
-                Alert.alert("Error", error.response?.data?.message || "An error occurred while cancelling the order.");
-                console.error("Error cancelling order:", error.response?.data || error.message);
+                Alert.alert(
+                  "Error",
+                  error.response?.data?.message ||
+                    "An error occurred while cancelling the order."
+                );
               }
             }
           },
@@ -194,13 +207,13 @@ const ProfileScreen = () => {
     );
   };
 
-  // Fetch data initially and when user ID changes
+  // Lấy dữ liệu khi ID người dùng thay đổi
   useEffect(() => {
     fetchUserProfile();
     fetchOrders();
   }, [userId, fetchUserProfile, fetchOrders]);
 
-  // Re-fetch data when screen is focused
+  // Lấy lại dữ liệu khi màn hình được focus
   useFocusEffect(
     useCallback(() => {
       fetchUserProfile();
@@ -208,30 +221,34 @@ const ProfileScreen = () => {
     }, [fetchUserProfile, fetchOrders])
   );
 
+  // Xử lý đăng xuất
   const logout = async () => {
     try {
       await AsyncStorage.removeItem("authToken");
-      setUserId(null); // Clear userId from context
-      console.log("Auth token cleared");
+      setUserId(null); // Xóa userId khỏi ngữ cảnh
       navigation.replace("Login");
     } catch (error) {
-      console.error("Error logging out:", error);
       Alert.alert("Error", "Logout failed. Please try again.");
     }
   };
 
-  // Function to get status text style
+  // Hàm lấy style cho trạng thái đơn hàng
   const getStatusTextStyle = (status) => {
     switch (status) {
-      case 'Pending': return { color: '#FFA500', fontWeight: 'bold' }; // Orange
-      case 'Processing': return { color: '#007bff', fontWeight: 'bold' }; // Blue
-      case 'Shipped': return { color: '#17a2b8', fontWeight: 'bold' }; // Cyan
-      case 'Delivered': return { color: '#28a745', fontWeight: 'bold' }; // Green
-      case 'Cancelled': return { color: '#dc3545', fontWeight: 'bold' }; // Red
-      default: return { color: '#333', fontWeight: 'bold' };
+      case "Pending":
+        return { color: "#FFA500", fontWeight: "bold" };
+      case "Processing":
+        return { color: "#007bff", fontWeight: "bold" };
+      case "Shipped":
+        return { color: "#17a2b8", fontWeight: "bold" };
+      case "Delivered":
+        return { color: "#28a745", fontWeight: "bold" };
+      case "Cancelled":
+        return { color: "#dc3545", fontWeight: "bold" };
+      default:
+        return { color: "#333", fontWeight: "bold" };
     }
   };
-
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -288,80 +305,77 @@ const ProfileScreen = () => {
           </View>
         ) : orders.length > 0 ? (
           <View>
-            {orders.map(
-              (
-                order
-              ) => (
-                <Pressable
-                  style={styles.orderCard}
-                  key={order._id}
-                  onPress={() =>
-                    navigation.navigate("Order", {
-                      cartItems: order.products,
-                      totalPrice: order.totalPrice,
-                      shippingAddress: order.shippingAddress,
-                      paymentMethod: order.paymentMethod,
-                      orderStatus: order.orderStatus, // Pass order status to order screen
-                    })
-                  }
-                >
-                  <Text style={styles.orderCardPrice}>
-                    Total: ${order.totalPrice.toFixed(2)}
+            {orders.map((order) => (
+              <Pressable
+                style={styles.orderCard}
+                key={order._id}
+                onPress={() =>
+                  navigation.navigate("Order", {
+                    cartItems: order.products,
+                    totalPrice: order.totalPrice,
+                    shippingAddress: order.shippingAddress,
+                    paymentMethod: order.paymentMethod,
+                    orderStatus: order.orderStatus,
+                  })
+                }
+              >
+                <Text style={styles.orderCardPrice}>
+                  Total: ${order.totalPrice.toFixed(2)}
+                </Text>
+                <Text style={styles.orderDate}>
+                  Ordered on: {new Date(order.createdAt).toLocaleDateString()}
+                </Text>
+                <Text style={styles.orderPaymentMethod}>
+                  Payment:{" "}
+                  {order.paymentMethod === "cash"
+                    ? "Cash on Delivery"
+                    : "Online Payment"}
+                </Text>
+                {/* Hiển thị trạng thái đơn hàng */}
+                <View style={styles.orderStatusContainer}>
+                  <Text style={styles.orderStatusLabel}>Status:</Text>
+                  <Text style={getStatusTextStyle(order.orderStatus)}>
+                    {order.orderStatus}
                   </Text>
-                  <Text style={styles.orderDate}>
-                    Ordered on: {new Date(order.createdAt).toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.orderPaymentMethod}>
-                    Payment:{" "}
-                    {order.paymentMethod === "cash"
-                      ? "Cash on Delivery"
-                      : "Online Payment"}
-                  </Text>
-                  {/* NEW: Display Order Status */}
-                  <View style={styles.orderStatusContainer}>
-                    <Text style={styles.orderStatusLabel}>Status:</Text>
-                    <Text style={getStatusTextStyle(order.orderStatus)}>
-                      {order.orderStatus}
-                    </Text>
-                  </View>
+                </View>
 
-                  <View style={styles.orderProductsContainer}>
-                    <Text style={styles.productsInOrderText}>
-                      Products in this order:
-                    </Text>
-                    {order.products.map((product, pIdx) => (
-                      <View key={pIdx} style={styles.productItemInOrder}>
-                        <Image
-                          source={{ uri: product.image }}
-                          style={styles.orderProductImage}
-                        />
-                        <View style={styles.productDetailsInOrder}>
-                          <Text
-                            numberOfLines={2}
-                            style={styles.productNameInOrder}
-                          >
-                            {product.name}
-                          </Text>
-                          <Text style={styles.productQtyPriceInOrder}>
-                            Qty: {product.quantity} | Price: $
-                            {product.price.toFixed(2)}
-                          </Text>
-                        </View>
+                <View style={styles.orderProductsContainer}>
+                  <Text style={styles.productsInOrderText}>
+                    Products in this order:
+                  </Text>
+                  {order.products.map((product, pIdx) => (
+                    <View key={pIdx} style={styles.productItemInOrder}>
+                      <Image
+                        source={{ uri: product.image }}
+                        style={styles.orderProductImage}
+                      />
+                      <View style={styles.productDetailsInOrder}>
+                        <Text
+                          numberOfLines={2}
+                          style={styles.productNameInOrder}
+                        >
+                          {product.name}
+                        </Text>
+                        <Text style={styles.productQtyPriceInOrder}>
+                          Qty: {product.quantity} | Price: $
+                          {product.price.toFixed(2)}
+                        </Text>
                       </View>
-                    ))}
-                  </View>
-                  {/* NEW: Cancel Button for Pending and Processing Orders */}
-                  {(order.orderStatus === 'Pending' || order.orderStatus === 'Processing') && (
-                    <Pressable
-                      onPress={() => handleCancelOrder(order._id)}
-                      style={styles.cancelButton}
-                    >
-                      <Text style={styles.cancelButtonText}>Cancel Order</Text>
-                    </Pressable>
-                  )}
-                </Pressable>
-              )
-            )}
+                    </View>
+                  ))}
+                </View>
+                {/* Nút hủy đơn hàng cho đơn hàng đang chờ hoặc đang xử lý */}
+                {(order.orderStatus === "Pending" ||
+                  order.orderStatus === "Processing") && (
+                  <Pressable
+                    onPress={() => handleCancelOrder(order._id)}
+                    style={styles.cancelButton}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel Order</Text>
+                  </Pressable>
+                )}
+              </Pressable>
+            ))}
           </View>
         ) : (
           <View style={styles.emptyOrdersContainer}>
@@ -512,19 +526,17 @@ const styles = StyleSheet.create({
     color: "#777",
     marginBottom: 10,
   },
-  // NEW: Order status styles
   orderStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 10,
   },
   orderStatusLabel: {
     fontSize: 13,
-    color: '#777',
+    color: "#777",
     marginRight: 5,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
-  // Dynamic color applied via getStatusTextStyle function
 
   orderProductsContainer: {
     borderTopWidth: 1,
@@ -565,13 +577,12 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 2,
   },
-  // NEW: Cancel Button styles
   cancelButton: {
-    backgroundColor: '#dc3545', // Red for cancel
+    backgroundColor: "#dc3545",
     paddingVertical: 10,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -580,9 +591,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cancelButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 
   emptyOrdersContainer: {

@@ -67,13 +67,13 @@ const HomeScreen = () => {
       name: "Fashion",
     },
   ];
-  
+
   const images = [
     "https://img.etimg.com/thumb/msid-93051525,width-1070,height-580,imgsize-2243475,overlay-economictimes/photo.jpg",
     "https://images-eu.ssl-images-amazon.com/images/G/31/img22/Wireless/devjyoti/PD23/Launches/Updated_ingress1242x550_3.gif",
     "https://images-eu.ssl-images-amazon.com/images/G/31/img23/Books/BB/JULY/1242x550_Header-BB-Jul23.jpg",
   ];
-  
+
   const deals = [
     {
       id: "20",
@@ -139,7 +139,7 @@ const HomeScreen = () => {
       ],
     },
   ];
-  
+
   const offers = [
     {
       id: "11",
@@ -220,7 +220,7 @@ const HomeScreen = () => {
   const cart = useSelector((state) => state.cart.cart);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Fetch Products (from FakeStoreAPI - no token required)
+  // Lấy dữ liệu sản phẩm từ FakeStoreAPI
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -233,22 +233,25 @@ const HomeScreen = () => {
     fetchData();
   }, []);
 
-  // Common authentication error handler
-  const handleAuthError = useCallback((error) => {
-    console.error("Authentication error:", error.response?.data || error.message);
-    Alert.alert(
-      "Session Expired",
-      "Your session has expired or is invalid. Please log in again."
-    );
-    AsyncStorage.removeItem("authToken")
-      .then(() => {
-        setUserId(null);
-        navigation.replace("Login");
-      })
-      .catch((err) => console.error("Error clearing token on logout:", err));
-  }, [navigation, setUserId]);
+  // Xử lý lỗi xác thực và đăng xuất
+  const handleAuthError = useCallback(
+    (error) => {
+      Alert.alert(
+        "Session Expired",
+        "Your session has expired or is invalid. Please log in again."
+      );
+      // Xóa token và chuyển hướng đến màn hình đăng nhập
+      AsyncStorage.removeItem("authToken")
+        .then(() => {
+          setUserId(null);
+          navigation.replace("Login");
+        })
+        .catch((err) => console.error("Error clearing token on logout:", err));
+    },
+    [navigation, setUserId]
+  );
 
-  // Fetch Addresses (token required)
+  // Lấy danh sách địa chỉ của người dùng
   const fetchAddresses = useCallback(async () => {
     if (!userId) {
       setAddresses([]);
@@ -261,6 +264,7 @@ const HomeScreen = () => {
         return;
       }
 
+      // Gửi yêu cầu lấy địa chỉ với token xác thực
       const response = await axios.get(
         `http://10.0.2.2:8000/addresses/${userId}`,
         {
@@ -271,17 +275,17 @@ const HomeScreen = () => {
       );
       setAddresses(response.data.addresses || []);
     } catch (error) {
+      // Xử lý lỗi xác thực hoặc lỗi khác
       if (error.response?.status === 401 || error.response?.status === 403) {
         handleAuthError(error);
       } else {
-        console.error("Error fetching addresses:", error);
         Alert.alert("Error", "Failed to load address list.");
       }
       setAddresses([]);
     }
   }, [userId, handleAuthError]);
 
-  // Fetch User ID from AsyncStorage and set to context
+  // Lấy User ID từ AsyncStorage và cập nhật context
   useEffect(() => {
     const fetchUserAndAddresses = async () => {
       try {
@@ -291,20 +295,21 @@ const HomeScreen = () => {
           const currentUserId = decodedToken.userId;
           setUserId(currentUserId);
         } else {
-          console.log("No auth token found on HomeScreen init. User not logged in.");
           setUserId(null);
         }
       } catch (error) {
-        console.error("Error decoding token on HomeScreen:", error);
         setUserId(null);
-        Alert.alert("Error", "Failed to read user information. Please log in again.");
+        Alert.alert(
+          "Error",
+          "Failed to read user information. Please log in again."
+        );
         navigation.replace("Login");
       }
     };
     fetchUserAndAddresses();
   }, [setUserId, navigation]);
 
-  // Fetch addresses when userId changes or modal visibility changes
+  // Cập nhật địa chỉ khi userId hoặc trạng thái modal thay đổi
   useEffect(() => {
     if (userId) {
       fetchAddresses();
@@ -314,25 +319,23 @@ const HomeScreen = () => {
     }
   }, [userId, modalVisible, fetchAddresses]);
 
-  // Set default selected address when addresses are loaded
+  // Đặt địa chỉ mặc định khi danh sách địa chỉ được tải
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
       setSelectedAddress(addresses[0]);
     }
   }, [addresses, selectedAddress]);
 
+  // Callback cho DropDownPicker
   const onGenderOpen = useCallback(() => {
-    // This function seems to be intended for DropDownPicker.
-    // It currently sets 'open' state to its current value, which might not be the intended behavior.
-    // Usually, it's used to manage state of multiple dropdowns.
-    // setCompanyOpen(false); // This was commented out in original code
+    // Hàm này có thể được sử dụng để quản lý trạng thái của nhiều dropdown
   }, []);
 
   return (
     <>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.container}>
-          {/* Search Bar */}
+          {/* Thanh tìm kiếm */}
           <View style={styles.searchContainer}>
             <Pressable style={styles.searchBar}>
               <View style={styles.searchIcon}>
@@ -350,7 +353,7 @@ const HomeScreen = () => {
             </Pressable>
           </View>
 
-          {/* Delivery Location */}
+          {/* Vị trí giao hàng */}
           <Pressable
             onPress={() => setModalVisible(!modalVisible)}
             style={styles.locationContainer}
@@ -362,37 +365,30 @@ const HomeScreen = () => {
                   Deliver to: {selectedAddress?.name}...
                 </Text>
               ) : (
-                <Text style={styles.locationText}>
-                  Choose your location
-                </Text>
+                <Text style={styles.locationText}>Choose your location</Text>
               )}
             </Pressable>
             <MaterialIcons name="arrow-drop-down" size={24} color="black" />
           </Pressable>
 
-          {/* Categories */}
-          <ScrollView 
-            horizontal 
+          {/* Danh mục sản phẩm */}
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesContainer}
           >
             {list.map((item, index) => (
-              <Pressable
-                key={index}
-                style={styles.categoryItem}
-              >
+              <Pressable key={index} style={styles.categoryItem}>
                 <Image
                   style={styles.categoryImage}
                   source={{ uri: item.image }}
                 />
-                <Text style={styles.categoryText}>
-                  {item?.name}
-                </Text>
+                <Text style={styles.categoryText}>{item?.name}</Text>
               </Pressable>
             ))}
           </ScrollView>
 
-          {/* Banner Carousel */}
+          {/* Carousel banner */}
           <ScrollView
             horizontal
             pagingEnabled
@@ -408,7 +404,7 @@ const HomeScreen = () => {
             ))}
           </ScrollView>
 
-          {/* Trending Deals */}
+          {/* Ưu đãi thịnh hành trong tuần */}
           <Text style={styles.sectionTitle}>Trending Deals of the week</Text>
           <ScrollView
             horizontal
@@ -432,18 +428,15 @@ const HomeScreen = () => {
                 key={index}
                 style={styles.dealItem}
               >
-                <Image
-                  style={styles.dealImage}
-                  source={{ uri: item?.image }}
-                />
+                <Image style={styles.dealImage} source={{ uri: item?.image }} />
               </Pressable>
             ))}
           </ScrollView>
 
-          {/* Today's Deals */}
+          {/* Ưu đãi hôm nay */}
           <Text style={styles.sectionTitle}>Today's Deals</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.offersContainer}
           >
@@ -469,18 +462,16 @@ const HomeScreen = () => {
                   source={{ uri: item?.image }}
                 />
                 <View style={styles.offerBadge}>
-                  <Text style={styles.offerBadgeText}>
-                    Upto {item?.offer}
-                  </Text>
+                  <Text style={styles.offerBadgeText}>Upto {item?.offer}</Text>
                 </View>
               </Pressable>
             ))}
           </ScrollView>
 
-          {/* Divider */}
+          {/* Đường phân cách */}
           <View style={styles.divider} />
 
-          {/* Category Picker */}
+          {/* Bộ chọn danh mục */}
           <View style={styles.categoryPickerContainer}>
             <DropDownPicker
               style={styles.dropdown}
@@ -498,7 +489,7 @@ const HomeScreen = () => {
             />
           </View>
 
-          {/* Products by Category */}
+          {/* Sản phẩm theo danh mục */}
           <Text style={styles.sectionTitle}>Recommended for You</Text>
           <View style={styles.productsContainer}>
             {products
@@ -508,7 +499,7 @@ const HomeScreen = () => {
               ))}
           </View>
 
-          {/* Similar Products */}
+          {/* Sản phẩm tương tự */}
           <Text style={styles.sectionTitle}>Similar Products</Text>
           <ScrollView
             horizontal
@@ -517,7 +508,7 @@ const HomeScreen = () => {
           >
             {products
               ?.filter((item) => item.category === category)
-              .slice(0, 5) // Show first 5 similar products
+              .slice(0, 5) // Hiển thị 5 sản phẩm tương tự đầu tiên
               .map((item, index) => (
                 <Pressable
                   key={`similar-${index}`}
@@ -542,16 +533,14 @@ const HomeScreen = () => {
                   <Text style={styles.similarProductTitle} numberOfLines={2}>
                     {item.title}
                   </Text>
-                  <Text style={styles.similarProductPrice}>
-                    ${item.price}
-                  </Text>
+                  <Text style={styles.similarProductPrice}>${item.price}</Text>
                 </Pressable>
               ))}
           </ScrollView>
         </ScrollView>
       </SafeAreaView>
 
-      {/* Address Modal */}
+      {/* Modal chọn địa chỉ */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -566,18 +555,16 @@ const HomeScreen = () => {
             style={styles.modalContent}
             onPress={(e) => e.stopPropagation()}
           >
-            {/* Header */}
+            {/* Tiêu đề modal */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Choose your location
-              </Text>
+              <Text style={styles.modalTitle}>Choose your location</Text>
               <Text style={styles.modalSubtitle}>
                 Select a delivery location to see product availability and
                 delivery options
               </Text>
             </View>
 
-            {/* Address Cards */}
+            {/* Các thẻ địa chỉ */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -585,12 +572,16 @@ const HomeScreen = () => {
             >
               {!userId && (
                 <View style={styles.noAddressCard}>
-                  <Text style={styles.noAddressText}>Please log in to view addresses.</Text>
+                  <Text style={styles.noAddressText}>
+                    Please log in to view addresses.
+                  </Text>
                 </View>
               )}
               {userId && addresses.length === 0 && (
                 <View style={styles.noAddressCard}>
-                  <Text style={styles.noAddressText}>You don't have any addresses saved.</Text>
+                  <Text style={styles.noAddressText}>
+                    You don't have any addresses saved.
+                  </Text>
                 </View>
               )}
               {addresses?.map((item, index) => (
@@ -602,18 +593,14 @@ const HomeScreen = () => {
                   }}
                   style={[
                     styles.addressCard,
-                    selectedAddress?._id === item?._id && styles.selectedAddressCard
+                    selectedAddress?._id === item?._id &&
+                      styles.selectedAddressCard,
                   ]}
                 >
                   <View style={styles.addressNameContainer}>
-                    <Text style={styles.addressName}>
-                      {item?.name}
-                    </Text>
+                    <Text style={styles.addressName}>{item?.name}</Text>
                   </View>
-                  <Text 
-                    numberOfLines={1} 
-                    style={styles.addressDetails}
-                  >
+                  <Text numberOfLines={1} style={styles.addressDetails}>
                     {item?.houseNo}, {item?.street}, {item?.city}
                   </Text>
                 </Pressable>
@@ -631,42 +618,51 @@ const HomeScreen = () => {
               </Pressable>
             </ScrollView>
 
-            {/* Options List */}
+            {/* Danh sách tùy chọn */}
             <View style={styles.modalOptions}>
               <Pressable
                 style={styles.modalOption}
-                onPress={() => Alert.alert("Info", "Enter Vietnam address function is under development.")}
+                onPress={() =>
+                  Alert.alert(
+                    "Info",
+                    "Enter Vietnam address function is under development."
+                  )
+                }
               >
                 <View style={styles.optionIcon}>
                   <Entypo name="location-pin" size={22} color="#0066b2" />
                 </View>
-                <Text style={styles.optionText}>
-                  Enter a Vietnam address
-                </Text>
+                <Text style={styles.optionText}>Enter a Vietnam address</Text>
               </Pressable>
 
               <Pressable
                 style={styles.modalOption}
-                onPress={() => Alert.alert("Info", "Use current location function is under development.")}
+                onPress={() =>
+                  Alert.alert(
+                    "Info",
+                    "Use current location function is under development."
+                  )
+                }
               >
                 <View style={styles.optionIcon}>
                   <Ionicons name="locate-sharp" size={22} color="#0066b2" />
                 </View>
-                <Text style={styles.optionText}>
-                  Use my current location
-                </Text>
+                <Text style={styles.optionText}>Use my current location</Text>
               </Pressable>
 
               <Pressable
                 style={styles.modalOption}
-                onPress={() => Alert.alert("Info", "Deliver outside Vietnam function is under development.")}
+                onPress={() =>
+                  Alert.alert(
+                    "Info",
+                    "Deliver outside Vietnam function is under development."
+                  )
+                }
               >
                 <View style={styles.optionIcon}>
                   <AntDesign name="earth" size={22} color="#0066b2" />
                 </View>
-                <Text style={styles.optionText}>
-                  Deliver outside Vietnam
-                </Text>
+                <Text style={styles.optionText}>Deliver outside Vietnam</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -679,16 +675,16 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   searchContainer: {
     backgroundColor: "#00CED1",
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 50,
+    paddingTop: Platform.OS === "android" ? 40 : 50,
     paddingBottom: 15,
     flexDirection: "row",
     alignItems: "center",
@@ -860,11 +856,11 @@ const styles = StyleSheet.create({
   similarProductItem: {
     width: 150,
     marginRight: 15,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     borderRadius: 8,
     padding: 10,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -873,19 +869,19 @@ const styles = StyleSheet.create({
     width: 130,
     height: 130,
     resizeMode: "contain",
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 10,
   },
   similarProductTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginBottom: 5,
     height: 40,
   },
   similarProductPrice: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#E31837',
+    fontWeight: "bold",
+    color: "#E31837",
   },
   modalOverlay: {
     flex: 1,
@@ -921,17 +917,17 @@ const styles = StyleSheet.create({
   noAddressCard: {
     width: 150,
     height: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#D0D0D0',
+    borderColor: "#D0D0D0",
     borderRadius: 8,
     padding: 10,
   },
   noAddressText: {
-    textAlign: 'center',
-    color: '#666',
+    textAlign: "center",
+    color: "#666",
   },
   addressCard: {
     width: 150,
@@ -1006,7 +1002,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   placeholderStyles: {
-    color: '#999',
+    color: "#999",
   },
 });
 

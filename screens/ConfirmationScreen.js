@@ -1,5 +1,5 @@
 import {
-  Image, // Import Image for MoMo logo
+  Image,
   StyleSheet,
   Text,
   View,
@@ -8,9 +8,9 @@ import {
   Alert,
   SafeAreaView,
   Platform,
-  Modal, // Import Modal from react-native
-  ActivityIndicator, // Used for loading state in modal
-  TextInput, // Used for phone and PIN input in modal
+  Modal,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
@@ -20,7 +20,6 @@ import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { useDispatch, useSelector } from "react-redux";
 import { cleanCart } from "../redux/CartReducer";
 import { useNavigation } from "@react-navigation/native";
-// import RazorpayCheckout from "react-native-razorpay"; // REMOVED: No longer needed
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ConfirmationScreen = () => {
@@ -41,13 +40,12 @@ const ConfirmationScreen = () => {
 
   const [showFakePaymentModal, setShowFakePaymentModal] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState(''); // NEW STATE: for phone number in modal
-  const [paymentPin, setPaymentPin] = useState('');     // NEW STATE: for payment PIN in modal
-  const [fakePaymentError, setFakePaymentError] = useState(''); // NEW STATE: for error in modal
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [paymentPin, setPaymentPin] = useState("");
+  const [fakePaymentError, setFakePaymentError] = useState("");
 
-  // Common authentication error handler
+  // Xử lý lỗi xác thực và đăng xuất
   const handleAuthError = async (error) => {
-    console.error("Authentication error:", error.response?.data || error.message);
     Alert.alert(
       "Session Expired",
       "Your session has expired or is invalid. Please log in again."
@@ -62,9 +60,9 @@ const ConfirmationScreen = () => {
     }
   }, [userId]);
 
+  // Lấy danh sách địa chỉ người dùng
   const fetchAddresses = async () => {
     if (!userId) {
-      console.log("User ID not available, skipping address fetch.");
       return;
     }
     try {
@@ -87,8 +85,12 @@ const ConfirmationScreen = () => {
       if (error.response?.status === 401 || error.response?.status === 403) {
         handleAuthError(error);
       } else {
-        console.log("Error fetching addresses:", error.response ? error.response.data : error.message);
-        Alert.alert("Error", `Failed to load address list: ${error.response?.data?.message || error.message}.`);
+        Alert.alert(
+          "Error",
+          `Failed to load address list: ${
+            error.response?.data?.message || error.message
+          }.`
+        );
       }
     }
   };
@@ -97,6 +99,7 @@ const ConfirmationScreen = () => {
   const [option, setOption] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
 
+  // Xử lý đặt hàng
   const handlePlaceOrder = async (finalPaymentMethod) => {
     if (!selectedAddress) {
       Alert.alert("Missing Information", "Please select a delivery address.");
@@ -110,7 +113,10 @@ const ConfirmationScreen = () => {
     try {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) {
-        Alert.alert("Error", "No authentication token found. Please log in again.");
+        Alert.alert(
+          "Error",
+          "No authentication token found. Please log in again."
+        );
         navigation.replace("Login");
         return;
       }
@@ -123,6 +129,7 @@ const ConfirmationScreen = () => {
         paymentMethod: finalPaymentMethod,
       };
 
+      // Gửi yêu cầu tạo đơn hàng
       const response = await axios.post(
         "http://10.0.2.2:8000/orders",
         orderData,
@@ -140,60 +147,72 @@ const ConfirmationScreen = () => {
           shippingAddress: selectedAddress,
           paymentMethod: finalPaymentMethod,
         });
-        dispatch(cleanCart());
-        console.log("Order created successfully", response.data);
+        dispatch(cleanCart()); // Xóa giỏ hàng sau khi đặt hàng
       } else {
-        Alert.alert("Order Error", "An error occurred while creating your order. Please try again.");
-        console.log("Error creating order", response.data);
+        Alert.alert(
+          "Order Error",
+          "An error occurred while creating your order. Please try again."
+        );
       }
     } catch (error) {
       if (error.response?.status === 401 || error.response?.status === 403) {
         handleAuthError(error);
       } else {
-        Alert.alert("Order Error", `Failed to create order: ${error.response?.data?.message || error.message}. Please try again.`);
-        console.log("Error during order creation:", error.response ? error.response.data : error.message);
+        Alert.alert(
+          "Order Error",
+          `Failed to create order: ${
+            error.response?.data?.message || error.message
+          }. Please try again.`
+        );
       }
     }
   };
 
-  // Modified: pay() now just opens the fake payment modal
+  // Mở modal thanh toán giả lập
   const pay = async () => {
     if (!selectedAddress) {
-      Alert.alert("Missing Address", "Please select a delivery address before proceeding to payment.");
+      Alert.alert(
+        "Missing Address",
+        "Please select a delivery address before proceeding to payment."
+      );
       return;
     }
-    setFakePaymentError(''); // Clear previous errors
-    setPhoneNumber(''); // Clear previous inputs
-    setPaymentPin('');
+    setFakePaymentError("");
+    setPhoneNumber("");
+    setPaymentPin("");
     setShowFakePaymentModal(true);
   };
 
-  // NEW: handle simulated payment outcome with MoMoPay logic
+  // Xử lý thanh toán MoMo giả lập
   const handleSimulatedMoMoPay = async () => {
-    setFakePaymentError(''); // Clear errors for new attempt
+    setFakePaymentError("");
 
     if (!phoneNumber.trim() || !paymentPin.trim()) {
-      setFakePaymentError('Please enter both phone number and PIN.');
+      setFakePaymentError("Please enter both phone number and PIN.");
       return;
     }
-    if (phoneNumber.trim().length < 9) { // Basic phone number validation
-      setFakePaymentError('Invalid phone number length.');
+    if (phoneNumber.trim().length < 9) {
+      setFakePaymentError("Invalid phone number length.");
       return;
     }
-    if (paymentPin !== '123456') { // Specific PIN for success
-      setFakePaymentError('Incorrect PIN. Payment failed.');
+    if (paymentPin !== "123456") {
+      // PIN chính xác để thanh toán thành công
+      setFakePaymentError("Incorrect PIN. Payment failed.");
     }
 
-    setPaymentProcessing(true); // Indicate processing
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-    setPaymentProcessing(false); // End processing
+    setPaymentProcessing(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Giả lập độ trễ mạng
+    setPaymentProcessing(false);
 
-    if (paymentPin === '123456') {
-      setShowFakePaymentModal(false); // Close modal
-      Alert.alert("Payment Successful", "Your MoMoPay payment has been successfully processed.");
-      handlePlaceOrder("card"); // Proceed with order creation as 'card' payment
+    if (paymentPin === "123456") {
+      setShowFakePaymentModal(false);
+      Alert.alert(
+        "Payment Successful",
+        "Your MoMoPay payment has been successfully processed."
+      );
+      handlePlaceOrder("card"); // Tiến hành tạo đơn hàng với phương thức 'card'
     } else {
-      // Error already set by initial check. Keep modal open for retry.
+      // Lỗi đã được đặt, giữ modal mở để thử lại.
     }
   };
 
@@ -206,7 +225,7 @@ const ConfirmationScreen = () => {
       }}
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-        {/* Step Progress Bar */}
+        {/* Thanh tiến trình các bước */}
         <View style={styles.stepContainer}>
           {steps?.map((step, index) => (
             <View key={index} style={styles.stepItem}>
@@ -222,13 +241,22 @@ const ConfirmationScreen = () => {
                 style={[
                   styles.stepCircle,
                   index < currentStep && { backgroundColor: "#00CED1" },
-                  index === currentStep && { borderColor: "#00CED1", borderWidth: 2, backgroundColor: "white" },
+                  index === currentStep && {
+                    borderColor: "#00CED1",
+                    borderWidth: 2,
+                    backgroundColor: "white",
+                  },
                 ]}
               >
                 {index < currentStep ? (
                   <Text style={styles.stepCheck}>&#10003;</Text>
                 ) : (
-                  <Text style={[styles.stepNumber, index === currentStep && { color: "#00CED1" }]}>
+                  <Text
+                    style={[
+                      styles.stepNumber,
+                      index === currentStep && { color: "#00CED1" },
+                    ]}
+                  >
                     {index + 1}
                   </Text>
                 )}
@@ -238,21 +266,24 @@ const ConfirmationScreen = () => {
           ))}
         </View>
 
-        {/* Current Step Content */}
+        {/* Nội dung bước hiện tại */}
         {currentStep === 0 && (
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Select Delivery Address</Text>
             {addresses?.length === 0 && !userId ? (
               <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Loading addresses or user not found...</Text>
+                <Text style={styles.loadingText}>
+                  Loading addresses or user not found...
+                </Text>
               </View>
             ) : addresses?.length === 0 && userId ? (
               <View style={styles.emptyAddressContainer}>
                 <MaterialIcons name="location-off" size={40} color="#999" />
-                <Text style={styles.emptyAddressText}>You don't have any saved addresses.</Text>
+                <Text style={styles.emptyAddressText}>
+                  You don't have any saved addresses.
+                </Text>
               </View>
             ) : null}
-
 
             {addresses?.map((item, index) => (
               <Pressable
@@ -278,24 +309,51 @@ const ConfirmationScreen = () => {
                   </View>
 
                   <Text style={styles.addressText}>
-                    {item?.houseNo}{item?.landmark ? `, ${item?.landmark}` : ''}
+                    {item?.houseNo}
+                    {item?.landmark ? `, ${item?.landmark}` : ""}
                   </Text>
                   <Text style={styles.addressText}>{item?.street}</Text>
                   {item?.city && item?.country && (
-                    <Text style={styles.addressText}>{item?.city}, {item?.country}</Text>
+                    <Text style={styles.addressText}>
+                      {item?.city}, {item?.country}
+                    </Text>
                   )}
                   <Text style={styles.addressText}>
                     Phone: {item?.mobileNo}
                   </Text>
 
                   <View style={styles.addressActions}>
-                    <Pressable style={styles.addressActionButton} onPress={() => Alert.alert("Info", "Edit function is under development")}>
+                    <Pressable
+                      style={styles.addressActionButton}
+                      onPress={() =>
+                        Alert.alert(
+                          "Info",
+                          "Edit function is under development"
+                        )
+                      }
+                    >
                       <Text style={styles.addressActionButtonText}>Edit</Text>
                     </Pressable>
-                    <Pressable style={styles.addressActionButton} onPress={() => Alert.alert("Info", "Delete function is under development")}>
+                    <Pressable
+                      style={styles.addressActionButton}
+                      onPress={() =>
+                        Alert.alert(
+                          "Info",
+                          "Delete function is under development"
+                        )
+                      }
+                    >
                       <Text style={styles.addressActionButtonText}>Remove</Text>
                     </Pressable>
-                    <Pressable style={styles.addressActionButton} onPress={() => Alert.alert("Info", "Set as default function is under development")}>
+                    <Pressable
+                      style={styles.addressActionButton}
+                      onPress={() =>
+                        Alert.alert(
+                          "Info",
+                          "Set as default function is under development"
+                        )
+                      }
+                    >
                       <Text style={styles.addressActionButtonText}>
                         Set as Default
                       </Text>
@@ -328,7 +386,9 @@ const ConfirmationScreen = () => {
 
         {currentStep === 1 && (
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Choose your delivery options</Text>
+            <Text style={styles.sectionTitle}>
+              Choose your delivery options
+            </Text>
 
             <Pressable
               onPress={() => setOption(!option)}
@@ -364,7 +424,7 @@ const ConfirmationScreen = () => {
             <Pressable
               onPress={() => {
                 setSelectedOption("cash");
-                handlePlaceOrder("cash");
+                handlePlaceOrder("cash"); // Đặt hàng với phương thức tiền mặt
               }}
               style={[
                 styles.paymentMethodCard,
@@ -382,7 +442,7 @@ const ConfirmationScreen = () => {
             <Pressable
               onPress={() => {
                 setSelectedOption("card");
-                pay(); // Show fake payment modal
+                pay(); // Hiển thị modal thanh toán giả lập
               }}
               style={[
                 styles.paymentMethodCard,
@@ -414,7 +474,9 @@ const ConfirmationScreen = () => {
               </View>
 
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryItemTitle}>Items ({cart.length})</Text>
+                <Text style={styles.summaryItemTitle}>
+                  Items ({cart.length})
+                </Text>
                 <Text style={styles.summaryItemValue}>${total.toFixed(2)}</Text>
               </View>
 
@@ -425,9 +487,7 @@ const ConfirmationScreen = () => {
 
               <View style={styles.orderTotalRow}>
                 <Text style={styles.orderTotalText}>Order Total</Text>
-                <Text style={styles.orderTotalAmount}>
-                  ${total.toFixed(2)}
-                </Text>
+                <Text style={styles.orderTotalAmount}>${total.toFixed(2)}</Text>
               </View>
             </View>
 
@@ -441,7 +501,7 @@ const ConfirmationScreen = () => {
             </View>
 
             <Pressable
-              onPress={() => handlePlaceOrder(selectedOption)}
+              onPress={() => handlePlaceOrder(selectedOption)} // Đặt hàng với phương thức đã chọn
               style={styles.placeOrderButton}
             >
               <Text style={styles.placeOrderButtonText}>Place your order</Text>
@@ -450,26 +510,40 @@ const ConfirmationScreen = () => {
         )}
       </ScrollView>
 
-      {/* NEW: Fake MoMoPay-like Payment Modal */}
+      {/* Modal thanh toán MoMo giả lập */}
       <Modal
-        animationType="slide" // Use slide for a more "app-like" feel
+        animationType="slide"
         transparent={true}
         visible={showFakePaymentModal}
         onRequestClose={() => setShowFakePaymentModal(false)}
       >
-        <Pressable style={styles.fakePaymentModalOverlay} onPress={() => setShowFakePaymentModal(false)}>
-          <Pressable style={styles.fakePaymentModalContent} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={styles.fakePaymentModalOverlay}
+          onPress={() => setShowFakePaymentModal(false)}
+        >
+          <Pressable
+            style={styles.fakePaymentModalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Image
-              source={{ uri: 'https://cdn.icon-icons.com/icons2/2387/PNG/512/momo_logo_icon_145226.png' }} // MoMo-like logo
+              source={{
+                uri: "https://cdn.icon-icons.com/icons2/2387/PNG/512/momo_logo_icon_145226.png",
+              }}
               style={styles.momoLogo}
             />
-            <Text style={styles.fakePaymentModalTitle}>MoMoPay - Simulated Gateway</Text>
-            <Text style={styles.fakePaymentModalAmount}>Payment Amount: ${total.toFixed(2)}</Text>
-            
+            <Text style={styles.fakePaymentModalTitle}>
+              MoMoPay - Simulated Gateway
+            </Text>
+            <Text style={styles.fakePaymentModalAmount}>
+              Payment Amount: ${total.toFixed(2)}
+            </Text>
+
             {paymentProcessing ? (
               <View style={styles.fakePaymentLoading}>
-                <ActivityIndicator size="large" color="#FF0077" /> {/* MoMo-like color */}
-                <Text style={styles.fakePaymentLoadingText}>Processing MoMoPay payment...</Text>
+                <ActivityIndicator size="large" color="#FF0077" />
+                <Text style={styles.fakePaymentLoadingText}>
+                  Processing MoMoPay payment...
+                </Text>
               </View>
             ) : (
               <View style={styles.fakePaymentInputContainer}>
@@ -493,20 +567,24 @@ const ConfirmationScreen = () => {
                   maxLength={6}
                 />
                 {fakePaymentError ? (
-                  <Text style={styles.fakePaymentErrorText}>{fakePaymentError}</Text>
+                  <Text style={styles.fakePaymentErrorText}>
+                    {fakePaymentError}
+                  </Text>
                 ) : null}
 
                 <Pressable
-                  onPress={handleSimulatedMoMoPay}
+                  onPress={handleSimulatedMoMoPay} // Xử lý thanh toán MoMo giả lập
                   style={styles.fakePaymentButtonMoMo}
                 >
-                  <Text style={styles.fakePaymentButtonText}>Pay with MoMo</Text>
+                  <Text style={styles.fakePaymentButtonText}>
+                    Pay with MoMo
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
                     setShowFakePaymentModal(false);
-                    setSelectedOption(""); // Clear selection if cancelled
-                    setFakePaymentError(''); // Clear error on close
+                    setSelectedOption("");
+                    setFakePaymentError("");
                   }}
                   style={styles.fakePaymentButtonCancelMoMo}
                 >
@@ -827,137 +905,135 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 30,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginTop: 10,
   },
   emptyAddressContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 30,
     borderWidth: 1,
-    borderColor: '#D0D0D0',
+    borderColor: "#D0D0D0",
     borderRadius: 8,
-    backgroundColor: '#FDFDFD',
+    backgroundColor: "#FDFDFD",
     marginBottom: 20,
   },
   emptyAddressText: {
     fontSize: 16,
-    color: '#777',
+    color: "#777",
     marginTop: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  // START NEW STYLES FOR FAKE MOMOPAY MODAL
   fakePaymentModalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
   },
   fakePaymentModalContent: {
-    backgroundColor: '#FFFFFF', // White background
+    backgroundColor: "#FFFFFF",
     padding: 25,
-    borderRadius: 20, // More rounded corners
-    width: '85%', // Wider modal
-    maxWidth: 450, // Max width for larger screens
-    alignItems: 'center',
-    shadowColor: '#000',
+    borderRadius: 20,
+    width: "85%",
+    maxWidth: 450,
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4, // Stronger shadow
+    shadowOpacity: 0.4,
     shadowRadius: 15,
     elevation: 15,
   },
   momoLogo: {
     width: 80,
     height: 80,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     marginBottom: 10,
   },
   fakePaymentModalTitle: {
-    fontSize: 24, // Larger title
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: "bold",
     marginBottom: 10,
-    color: '#333',
-    textAlign: 'center',
+    color: "#333",
+    textAlign: "center",
   },
   fakePaymentModalAmount: {
-    fontSize: 20, // Larger amount text
-    fontWeight: '700',
-    color: '#FF0077', // MoMo primary color
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FF0077",
     marginBottom: 25,
   },
   fakePaymentInputContainer: {
-    width: '100%', // Full width inputs
-    alignItems: 'flex-start', // Align labels to left
+    width: "100%",
+    alignItems: "flex-start",
   },
   fakePaymentLabel: {
     fontSize: 16,
-    color: '#555',
+    color: "#555",
     marginBottom: 5,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   fakePaymentInput: {
-    width: '100%',
-    padding: 12, // More padding
+    width: "100%",
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#CCC', // Lighter border
-    borderRadius: 10, // More rounded
+    borderColor: "#CCC",
+    borderRadius: 10,
     marginBottom: 15,
     fontSize: 16,
-    color: '#333',
-    backgroundColor: '#F8F8F8', // Slightly off-white background
+    color: "#333",
+    backgroundColor: "#F8F8F8",
   },
   fakePaymentErrorText: {
-    color: '#FF0000', // Red error text
+    color: "#FF0000",
     fontSize: 14,
     marginBottom: 15,
-    textAlign: 'center',
-    fontWeight: '500',
-    width: '100%',
+    textAlign: "center",
+    fontWeight: "500",
+    width: "100%",
   },
   fakePaymentButtonMoMo: {
-    backgroundColor: '#FF0077', // MoMo primary color
-    paddingVertical: 14, // Larger button
-    borderRadius: 10, // More rounded
-    marginTop: 20, // More spacing
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#FF0077",
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 20,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 5,
   },
   fakePaymentButtonCancelMoMo: {
-    backgroundColor: '#888888', // Grey for cancel
+    backgroundColor: "#888888",
     paddingVertical: 14,
     borderRadius: 10,
     marginTop: 10,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   fakePaymentButtonText: {
-    color: 'white',
-    fontSize: 18, // Larger font
-    fontWeight: 'bold',
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
   },
   fakePaymentLoading: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 30,
   },
   fakePaymentLoadingText: {
     marginTop: 15,
     fontSize: 17,
-    color: '#555',
+    color: "#555",
   },
-  // END NEW STYLES FOR FAKE MOMOPAY MODAL
 });

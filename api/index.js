@@ -17,7 +17,7 @@ app.listen(PORT, () => {
   console.log(`Server is running on port 8000`);
 });
 
-// Connect to MongoDB
+// Kết nối đến MongoDB
 mongoose
   .connect("mongodb+srv://trungle:trungle@pj2.yvj5uym.mongodb.net/", {
     useNewUrlParser: true,
@@ -30,11 +30,11 @@ mongoose
     console.error("MongoDB connection error:", err);
   });
 
-// Models
+// Định nghĩa Models
 const User = require("./models/user");
 const Order = require("./models/order");
 
-// --- Helper functions (existing) ---
+// Hàm gửi email xác minh
 const sendVerificationEmail = async (email, verificationToken) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -53,13 +53,12 @@ const sendVerificationEmail = async (email, verificationToken) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log("Verification email sent successfully");
   } catch (error) {
     console.error("Error sending verification email:", error);
   }
 };
 
-// NEW: Helper function to send order confirmation email
+// Hàm gửi email xác nhận đơn hàng
 const sendOrderConfirmationEmail = async (userEmail, orderDetails) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -69,31 +68,51 @@ const sendOrderConfirmationEmail = async (userEmail, orderDetails) => {
     },
   });
 
-  let productListHtml = orderDetails.products.map(product => `
+  let productListHtml = orderDetails.products
+    .map(
+      (product) => `
     <li>
       ${product.name} (x${product.quantity}) - $${product.price.toFixed(2)}
     </li>
-  `).join('');
+  `
+    )
+    .join("");
 
   const mailOptions = {
     from: "Click_Buy.com",
     to: userEmail,
-    subject: `Order #${orderDetails._id.toString().slice(-6)} Confirmation - Click_Buy.com`,
+    subject: `Order #${orderDetails._id
+      .toString()
+      .slice(-6)} Confirmation - Click_Buy.com`,
     html: `
       <h2>Thank you for your order!</h2>
-      <p>Your order #${orderDetails._id.toString().slice(-6)} has been successfully placed.</p>
+      <p>Your order #${orderDetails._id
+        .toString()
+        .slice(-6)} has been successfully placed.</p>
       <h3>Order Details:</h3>
       <ul>
         <li><strong>Order ID:</strong> ${orderDetails._id}</li>
-        <li><strong>Total Price:</strong> $${orderDetails.totalPrice.toFixed(2)}</li>
-        <li><strong>Payment Method:</strong> ${orderDetails.paymentMethod === 'cash' ? 'Cash on Delivery' : 'Online Payment'}</li>
+        <li><strong>Total Price:</strong> $${orderDetails.totalPrice.toFixed(
+          2
+        )}</li>
+        <li><strong>Payment Method:</strong> ${
+          orderDetails.paymentMethod === "cash"
+            ? "Cash on Delivery"
+            : "Online Payment"
+        }</li>
         <li><strong>Order Status:</strong> ${orderDetails.orderStatus}</li>
       </ul>
       <h3>Shipping Address:</h3>
       <p>
         ${orderDetails.shippingAddress.name}<br>
-        ${orderDetails.shippingAddress.houseNo}, ${orderDetails.shippingAddress.street}<br>
-        ${orderDetails.shippingAddress.landmark ? orderDetails.shippingAddress.landmark + '<br>' : ''}
+        ${orderDetails.shippingAddress.houseNo}, ${
+      orderDetails.shippingAddress.street
+    }<br>
+        ${
+          orderDetails.shippingAddress.landmark
+            ? orderDetails.shippingAddress.landmark + "<br>"
+            : ""
+        }
         ${orderDetails.shippingAddress.postalCode}<br>
         Phone: ${orderDetails.shippingAddress.mobileNo}
       </p>
@@ -108,13 +127,15 @@ const sendOrderConfirmationEmail = async (userEmail, orderDetails) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Order confirmation email sent to ${userEmail} for order ${orderDetails._id}`);
   } catch (error) {
-    console.error(`Error sending order confirmation email to ${userEmail}:`, error);
+    console.error(
+      `Error sending order confirmation email to ${userEmail}:`,
+      error
+    );
   }
 };
 
-
+// Hàm tạo khóa bí mật
 const generateSecretKey = () => {
   const secretKey = crypto.randomBytes(32).toString("hex");
   return secretKey;
@@ -122,11 +143,10 @@ const generateSecretKey = () => {
 
 const secretKey = generateSecretKey();
 
-// --- AUTHENTICATION AND AUTHORIZATION MIDDLEWARE ---
-
+// Middleware xác thực token
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
     return res.status(401).json({ message: "Authentication token required" });
@@ -141,54 +161,55 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Middleware kiểm tra quyền admin
 const authorizeAdmin = async (req, res, next) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied. Admin privileges required." });
+    if (!req.user || req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Access denied. Admin privileges required." });
     }
     next();
   } catch (error) {
     console.error("Error in authorizeAdmin middleware:", error);
-    res.status(500).json({ message: "Internal server error during authorization" });
+    res
+      .status(500)
+      .json({ message: "Internal server error during authorization" });
   }
 };
 
-// --- EXISTING ENDPOINTS ---
-
+// Đăng ký người dùng mới
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.log("Email already registered:", email);
       return res.status(400).json({ message: "Email already registered" });
     }
-
-    // RECOMMENDED: Hash password before saving
-    // const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
       name,
       email,
-      password: password, // Replace with hashedPassword if using bcrypt
-      role: 'user'
+      password: password,
+      role: "user",
     });
 
     newUser.verificationToken = crypto.randomBytes(20).toString("hex");
     await newUser.save();
-    console.log("New User Registered:", newUser);
     sendVerificationEmail(newUser.email, newUser.verificationToken);
 
     res.status(201).json({
-      message: "Registration successful. Please check your email for verification.",
+      message:
+        "Registration successful. Please check your email for verification.",
     });
   } catch (error) {
-    console.log("Error during registration:", error);
+    console.error("Error during registration:", error);
     res.status(500).json({ message: "Registration failed" });
   }
 });
 
+// Xác minh email người dùng
 app.get("/verify/:token", async (req, res) => {
   try {
     const token = req.params.token;
@@ -210,6 +231,7 @@ app.get("/verify/:token", async (req, res) => {
   }
 });
 
+// Đăng nhập người dùng
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -219,16 +241,13 @@ app.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // RECOMMENDED: Compare hashed password here
-    // const isMatch = await bcrypt.compare(password, user.password);
-    // if (!isMatch) {
-    //   return res.status(401).json({ message: "Invalid password" });
-    // }
     if (user.password !== password) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, secretKey, { expiresIn: '24h' });
+    const token = jwt.sign({ userId: user._id, role: user.role }, secretKey, {
+      expiresIn: "24h",
+    });
 
     res.status(200).json({ token, role: user.role });
   } catch (error) {
@@ -237,12 +256,15 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// Thêm địa chỉ mới
 app.post("/addresses", authenticateToken, async (req, res) => {
   try {
     const { userId, address } = req.body;
 
     if (req.user.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized: Token mismatch for userId" });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Token mismatch for userId" });
     }
 
     const user = await User.findById(userId);
@@ -260,12 +282,15 @@ app.post("/addresses", authenticateToken, async (req, res) => {
   }
 });
 
+// Lấy tất cả địa chỉ của người dùng
 app.get("/addresses/:userId", authenticateToken, async (req, res) => {
   try {
     const userId = req.params.userId;
 
     if (req.user.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized: Token mismatch for userId" });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Token mismatch for userId" });
     }
 
     const user = await User.findById(userId);
@@ -281,26 +306,29 @@ app.get("/addresses/:userId", authenticateToken, async (req, res) => {
   }
 });
 
-// MODIFIED: Endpoint to store all the orders (now sends confirmation email)
+// Lưu trữ tất cả các đơn hàng và gửi email xác nhận
 app.post("/orders", authenticateToken, async (req, res) => {
-   try {
-     const { userId, cartItems, totalPrice, shippingAddress, paymentMethod } = req.body;
+  try {
+    const { userId, cartItems, totalPrice, shippingAddress, paymentMethod } =
+      req.body;
 
-     if (req.user.userId !== userId) {
-         return res.status(403).json({ message: "Unauthorized: Token mismatch for userId" });
-     }
+    if (req.user.userId !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Token mismatch for userId" });
+    }
 
-     const user = await User.findById(userId);
-     if (!user) {
-       return res.status(404).json({ message: "User not found" });
-     }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-     const products = cartItems.map((item) => ({
-       name: item?.title, // Changed from item?.name to item?.title
-       quantity: item.quantity,
-       price: item.price,
-       image: item?.image,
-     }));
+    const products = cartItems.map((item) => ({
+      name: item?.title,
+      quantity: item.quantity,
+      price: item.price,
+      image: item?.image,
+    }));
 
     const order = new Order({
       user: userId,
@@ -308,16 +336,18 @@ app.post("/orders", authenticateToken, async (req, res) => {
       totalPrice: totalPrice,
       shippingAddress: shippingAddress,
       paymentMethod: paymentMethod,
-      orderStatus: 'Pending', // Default status for new orders
+      orderStatus: "Pending",
     });
 
     await order.save();
 
-    // NEW: Send order confirmation email after successful order creation
+    // Gửi email xác nhận đơn hàng sau khi tạo đơn hàng thành công
     if (user.email) {
-      await sendOrderConfirmationEmail(user.email, order); // Pass user's email and saved order details
+      await sendOrderConfirmationEmail(user.email, order);
     } else {
-      console.warn(`User ${userId} does not have an email to send order confirmation.`);
+      console.warn(
+        `User ${userId} does not have an email to send order confirmation.`
+      );
     }
 
     res.status(200).json({ message: "Order created successfully!" });
@@ -327,13 +357,15 @@ app.post("/orders", authenticateToken, async (req, res) => {
   }
 });
 
-// get the user profile (kept as is)
+// Lấy hồ sơ người dùng
 app.get("/profile/:userId", authenticateToken, async (req, res) => {
   try {
     const userId = req.params.userId;
 
     if (req.user.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized: Token mismatch for userId" });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Token mismatch for userId" });
     }
 
     const user = await User.findById(userId);
@@ -349,30 +381,33 @@ app.get("/profile/:userId", authenticateToken, async (req, res) => {
   }
 });
 
-app.get("/orders/:userId", authenticateToken, async(req,res) => {
-  try{
+// Lấy đơn hàng của người dùng
+app.get("/orders/:userId", authenticateToken, async (req, res) => {
+  try {
     const userId = req.params.userId;
 
     if (req.user.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized: Token mismatch for userId" });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Token mismatch for userId" });
     }
 
-    const orders = await Order.find({user:userId}).populate("user");
+    const orders = await Order.find({ user: userId }).populate("user");
 
-    if(!orders || orders.length === 0){
-      return res.status(404).json({message:"No orders found for this user"})
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ message: "No orders found for this user" });
     }
 
     res.status(200).json({ orders });
-  } catch(error){
-      console.error("Error retrieving orders:", error);
-      res.status(500).json({ message: "Error retrieving orders" });
-    }
+  } catch (error) {
+    console.error("Error retrieving orders:", error);
+    res.status(500).json({ message: "Error retrieving orders" });
+  }
 });
 
+// --- ENDPOINTS DÀNH CHO ADMIN ---
 
-// --- ADMIN ENDPOINTS ---
-
+// Lấy tất cả người dùng (chỉ admin)
 app.get("/admin/users", authenticateToken, authorizeAdmin, async (req, res) => {
   try {
     const users = await User.find({});
@@ -383,87 +418,122 @@ app.get("/admin/users", authenticateToken, authorizeAdmin, async (req, res) => {
   }
 });
 
-app.put("/admin/users/:userId", authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const { name, email, role, verified, password } = req.body;
+// Cập nhật người dùng (chỉ admin)
+app.put(
+  "/admin/users/:userId",
+  authenticateToken,
+  authorizeAdmin,
+  async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      const { name, email, role, verified, password } = req.body;
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: { name, email, role, verified, password } },
-      { new: true, runValidators: true }
-    );
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { $set: { name, email, role, verified, password } },
+        { new: true, runValidators: true }
+      );
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json({ message: "User updated successfully", user });
+    } catch (error) {
+      console.error("Error updating user (admin):", error);
+      res.status(500).json({ message: "Error updating user" });
     }
-    res.status(200).json({ message: "User updated successfully", user });
-  } catch (error) {
-    console.error("Error updating user (admin):", error);
-    res.status(500).json({ message: "Error updating user" });
   }
-});
+);
 
-app.delete("/admin/users/:userId", authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const user = await User.findByIdAndDelete(userId);
+// Xóa người dùng (chỉ admin)
+app.delete(
+  "/admin/users/:userId",
+  authenticateToken,
+  authorizeAdmin,
+  async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      const user = await User.findByIdAndDelete(userId);
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user (admin):", error);
+      res.status(500).json({ message: "Error deleting user" });
     }
-    res.status(200).json({ message: "User deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting user (admin):", error);
-    res.status(500).json({ message: "Error deleting user" });
   }
-});
+);
 
-app.put("/admin/orders/:orderId", authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const orderId = req.params.orderId;
-    const { orderStatus } = req.body;
+// Cập nhật trạng thái đơn hàng (chỉ admin)
+app.put(
+  "/admin/orders/:orderId",
+  authenticateToken,
+  authorizeAdmin,
+  async (req, res) => {
+    try {
+      const orderId = req.params.orderId;
+      const { orderStatus } = req.body;
 
-    const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
-    if (!validStatuses.includes(orderStatus)) {
-        return res.status(400).json({ message: "Invalid order status provided" });
+      const validStatuses = [
+        "Pending",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+      ];
+      if (!validStatuses.includes(orderStatus)) {
+        return res
+          .status(400)
+          .json({ message: "Invalid order status provided" });
+      }
+
+      const order = await Order.findByIdAndUpdate(
+        orderId,
+        { $set: { orderStatus: orderStatus } },
+        { new: true, runValidators: true }
+      );
+
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res
+        .status(200)
+        .json({ message: "Order status updated successfully", order });
+    } catch (error) {
+      console.error("Error updating order status (admin):", error);
+      res.status(500).json({ message: "Error updating order status" });
     }
-
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      { $set: { orderStatus: orderStatus } },
-      { new: true, runValidators: true }
-    );
-
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-    res.status(200).json({ message: "Order status updated successfully", order });
-  } catch (error) {
-    console.error("Error updating order status (admin):", error);
-    res.status(500).json({ message: "Error updating order status" });
   }
-});
+);
 
-app.delete("/admin/orders/:orderId", authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const orderId = req.params.orderId;
-    const order = await Order.findByIdAndDelete(orderId);
+// Xóa đơn hàng (chỉ admin)
+app.delete(
+  "/admin/orders/:orderId",
+  authenticateToken,
+  authorizeAdmin,
+  async (req, res) => {
+    try {
+      const orderId = req.params.orderId;
+      const order = await Order.findByIdAndDelete(orderId);
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.status(200).json({ message: "Order deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting order (admin):", error);
+      res.status(500).json({ message: "Error deleting order" });
     }
-    res.status(200).json({ message: "Order deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting order (admin):", error);
-    res.status(500).json({ message: "Error deleting order" });
   }
-});
+);
 
+// Hủy đơn hàng (dành cho người dùng sở hữu đơn hàng)
 app.put("/orders/cancel/:orderId", authenticateToken, async (req, res) => {
   try {
     const orderId = req.params.orderId;
-    const userId = req.user.userId; // Get userId from authenticated token
+    const userId = req.user.userId;
 
     const order = await Order.findById(orderId);
 
@@ -471,33 +541,44 @@ app.put("/orders/cancel/:orderId", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Ensure the order belongs to the authenticated user
+    // Đảm bảo đơn hàng thuộc về người dùng đã xác thực
     if (order.user.toString() !== userId) {
-      return res.status(403).json({ message: "Unauthorized to cancel this order." });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to cancel this order." });
     }
 
-    // Only allow cancellation if the order status is 'Pending' or 'Processing'
-    if (order.orderStatus !== 'Pending' && order.orderStatus !== 'Processing') {
-      return res.status(400).json({ message: `Order cannot be cancelled. Current status: ${order.orderStatus}.` });
+    // Chỉ cho phép hủy nếu trạng thái đơn hàng là 'Pending' hoặc 'Processing'
+    if (order.orderStatus !== "Pending" && order.orderStatus !== "Processing") {
+      return res
+        .status(400)
+        .json({
+          message: `Order cannot be cancelled. Current status: ${order.orderStatus}.`,
+        });
     }
 
-    // Update the order status to 'Cancelled'
-    order.orderStatus = 'Cancelled';
+    // Cập nhật trạng thái đơn hàng thành 'Cancelled'
+    order.orderStatus = "Cancelled";
     await order.save();
 
     res.status(200).json({ message: "Order cancelled successfully.", order });
-
   } catch (error) {
     console.error("Error cancelling order:", error);
     res.status(500).json({ message: "Error cancelling order." });
   }
 });
 
-app.get('/admin/orders', authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const orders = await Order.find().populate('user', 'name email'); // Populate user's name and email
-    res.json({ orders });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch orders.' });
+// Lấy tất cả đơn hàng (chỉ admin)
+app.get(
+  "/admin/orders",
+  authenticateToken,
+  authorizeAdmin,
+  async (req, res) => {
+    try {
+      const orders = await Order.find().populate("user", "name email");
+      res.json({ orders });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch orders." });
+    }
   }
-});
+);

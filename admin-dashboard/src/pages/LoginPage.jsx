@@ -11,30 +11,32 @@ const LoginPage = () => {
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to dashboard if already logged in as admin
+  // Chuyển hướng đến bảng điều khiển nếu đã đăng nhập với vai trò admin
   if (user && user.role === 'admin') {
     navigate('/dashboard', { replace: true });
     return null;
   }
 
+  // Xử lý việc gửi form đăng nhập
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission
-    setError(''); // Clear previous errors
-    setLoading(true); // Start loading state
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
     try {
-      await login(email, password); // Call login function from AuthContext
-      // If login is successful and user is admin (checked in AuthContext), navigate
-      navigate('/dashboard'); 
+      // Gọi hàm đăng nhập từ AuthContext
+      await login(email, password);
+      // Nếu đăng nhập thành công và người dùng là admin, điều hướng
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
     } finally {
-      setLoading(false); // End loading state
+      setLoading(false);
     }
   };
 
   return (
-    <div style={styles.outerContainer}> {/* Added an outer container for centering */}
+    <div style={styles.outerContainer}>
       <div style={styles.container}>
         <h2 style={styles.heading}>Đăng nhập quản trị viên</h2>
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -76,24 +78,24 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: '100vh', // Ensure it takes full viewport height for centering
-    backgroundColor: '#f0f2f5', // Light background for the whole page
-    width: '100%', // Ensure outerContainer takes full width
+    minHeight: '100vh',
+    backgroundColor: '#f0f2f5',
+    width: '100%',
   },
   container: {
-    padding: '30px', // Increased padding
-    maxWidth: '450px', // Slightly wider
-    width: '90%', // Responsive width
-    backgroundColor: '#ffffff', // White background for the form card
-    borderRadius: '12px', // More rounded corners
-    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)', // Enhanced shadow
-    textAlign: 'left', // Ensure text aligns left within the card
+    padding: '30px',
+    maxWidth: '450px',
+    width: '90%',
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+    textAlign: 'left',
   },
   heading: {
     textAlign: 'center',
-    marginBottom: '30px', // Increased margin
+    marginBottom: '30px',
     color: '#333',
-    fontSize: '28px', // Larger heading
+    fontSize: '28px',
     fontWeight: '700',
   },
   form: {
@@ -101,46 +103,46 @@ const styles = {
     flexDirection: 'column',
   },
   inputGroup: {
-    marginBottom: '20px', // Increased margin
+    marginBottom: '20px',
   },
   label: {
     display: 'block',
     marginBottom: '8px',
     color: '#555',
-    fontWeight: '600', // Semi-bold labels
+    fontWeight: '600',
     fontSize: '15px',
   },
   input: {
-    width: 'calc(100% - 24px)', // Account for padding
-    padding: '12px', // Increased padding
-    borderRadius: '8px', // More rounded input fields
+    width: 'calc(100% - 24px)',
+    padding: '12px',
+    borderRadius: '8px',
     border: '1px solid #ddd',
     fontSize: '16px',
-    boxSizing: 'border-box', // Include padding in width calculation
+    boxSizing: 'border-box',
   },
   errorText: {
-    color: '#e74c3c', // Red for errors
+    color: '#e74c3c',
     marginBottom: '20px',
     textAlign: 'center',
     fontSize: '14px',
     fontWeight: '500',
   },
   button: {
-    padding: '14px 20px', // Larger button
-    backgroundColor: '#007bff', // Primary blue
+    padding: '14px 20px',
+    backgroundColor: '#007bff',
     color: 'white',
     border: 'none',
-    borderRadius: '8px', // More rounded button
+    borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '17px', // Larger font
+    fontSize: '17px',
     fontWeight: 'bold',
     transition: 'background-color 0.3s ease, transform 0.2s ease',
-    alignSelf: 'center', // Center the button if it doesn't take full width
-    width: '100%', // Make button full width of the form
+    alignSelf: 'center',
+    width: '100%',
   },
   buttonHover: {
     backgroundColor: '#0056b3',
-    transform: 'translateY(-2px)', // Subtle lift effect on hover
+    transform: 'translateY(-2px)',
   }
 };
 

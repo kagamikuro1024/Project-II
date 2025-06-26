@@ -20,6 +20,8 @@ const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
+
+  // Kiểm tra trạng thái đăng nhập khi khởi tạo màn hình
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
@@ -29,30 +31,32 @@ const LoginScreen = () => {
           navigation.replace("Main");
         }
       } catch (err) {
-        console.log("error message", err);
+        // Xử lý lỗi nếu có
       }
     };
     checkLoginStatus();
   }, []);
+
+  // Xử lý đăng nhập
   const handleLogin = () => {
     const user = {
       email: email,
       password: password,
     };
 
+    // Gửi yêu cầu POST đến API đăng nhập
     axios
       .post("http://10.0.2.2:8000/login", user)
       .then((response) => {
-        console.log(response);
         const token = response.data.token;
-        AsyncStorage.setItem("authToken", token);
-        navigation.replace("Main");
+        AsyncStorage.setItem("authToken", token); // Lưu token xác thực
+        navigation.replace("Main"); // Chuyển hướng đến màn hình chính
       })
       .catch((error) => {
-        Alert.alert("Login Error", "Invalid Email");
-        console.log(error);
+        Alert.alert("Login Error", "Invalid Email"); // Hiển thị thông báo lỗi
       });
   };
+
   return (
     <SafeAreaView
       style={{
@@ -169,7 +173,7 @@ const LoginScreen = () => {
         <View style={{ marginTop: 80 }} />
 
         <Pressable
-          onPress={handleLogin}
+          onPress={handleLogin} // Gọi hàm xử lý đăng nhập khi nhấn
           style={{
             width: 200,
             backgroundColor: "#89CFF0",
@@ -192,7 +196,7 @@ const LoginScreen = () => {
         </Pressable>
 
         <Pressable
-          onPress={() => navigation.navigate("Register")}
+          onPress={() => navigation.navigate("Register")} // Chuyển hướng đến màn hình đăng ký
           style={{ marginTop: 15 }}
         >
           <Text style={{ textAlign: "center", color: "gray", fontSize: 16 }}>

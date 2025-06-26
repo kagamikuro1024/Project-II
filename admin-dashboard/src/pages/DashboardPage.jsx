@@ -8,35 +8,35 @@ const DashboardPage = () => {
 
   return (
     <div style={styles.dashboardContainer}>
-      {/* Sidebar - Left Navigation Bar */}
+      {/* Thanh bên - Thanh điều hướng bên trái */}
       <div style={styles.sidebar}>
         <h3 style={styles.sidebarTitle}>Admin Dashboard</h3>
         <p style={styles.welcomeText}>Hello, {user?.name || 'Admin'}!</p>
         <ul style={styles.navList}>
           <li style={styles.navItem}><Link to="/users" style={styles.navLink}>Manage Users</Link></li>
           <li style={styles.navItem}><Link to="/orders" style={styles.navLink}>Manage Orders</Link></li>
-          {/* Add other links here */}
+          {/* Thêm các liên kết khác tại đây */}
         </ul>
         <button onClick={logout} style={styles.logoutButton}>
           Logout
         </button>
       </div>
 
-      {/* Main Content - Dashboard Main Content */}
+      {/* Nội dung chính - Nội dung chính của Trang tổng quan */}
       <div style={styles.mainContent}>
         <h1 style={styles.mainContentTitle}>Welcome to Admin Dashboard!</h1>
         <p style={styles.mainContentText}>Use the sidebar to navigate through management sections.</p>
-        {/* You can add widgets, statistics, charts here */}
+        {/* Có thể thêm các widget, số liệu thống kê, biểu đồ tại đây */}
         <div style={styles.statsGrid}>
-            <div style={styles.statCard}>
-                <h3>Total Users</h3>
-                <p style={styles.statNumber}>...</p> {/* Data will be loaded from API */}
-            </div>
-            <div style={styles.statCard}>
-                <h3>Total Orders</h3>
-                <p style={styles.statNumber}>...</p> {/* Data will be loaded from API */}
-            </div>
-            {/* Add more stat cards */}
+          <div style={styles.statCard}>
+            <h3>Total Users</h3>
+            <p style={styles.statNumber}>...</p> {/* Dữ liệu sẽ được tải từ API */}
+          </div>
+          <div style={styles.statCard}>
+            <h3>Total Orders</h3>
+            <p style={styles.statNumber}>...</p> {/* Dữ liệu sẽ được tải từ API */}
+          </div>
+          {/* Thêm các thẻ thống kê khác */}
         </div>
       </div>
     </div>
@@ -47,29 +47,29 @@ const DashboardPage = () => {
 const styles = {
   dashboardContainer: {
     display: 'flex',
-    minHeight: '100vh', /* Ensure it takes full viewport height */
-    backgroundColor: '#f8f9fa', // Lighter background for the entire dashboard
-    width: '100%', /* Ensure it takes full width */
+    minHeight: '100vh',
+    backgroundColor: '#f8f9fa',
+    width: '100%',
   },
   sidebar: {
-    width: '280px', // Slightly wider sidebar
-    flexShrink: 0, /* Prevent sidebar from shrinking */
-    backgroundColor: '#2d3a4b', // Darker, more professional blue-gray
+    width: '280px',
+    flexShrink: 0,
+    backgroundColor: '#2d3a4b',
     color: '#ecf0f1',
-    padding: '30px 20px', // More vertical padding
-    boxShadow: '4px 0 10px rgba(0, 0, 0, 0.1)', // Stronger shadow
-    display: 'flex', /* Added flex for internal layout of sidebar */
+    padding: '30px 20px',
+    boxShadow: '4px 0 10px rgba(0, 0, 0, 0.1)',
+    display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between', /* Pushes logout button to bottom */
-    transition: 'width 0.3s ease', // Smooth transition for responsive sidebar if implemented
+    justifyContent: 'space-between',
+    transition: 'width 0.3s ease',
   },
   sidebarTitle: {
     textAlign: 'center',
-    marginBottom: '40px', // More space below title
+    marginBottom: '40px',
     color: '#ffffff',
-    fontSize: '24px', // Larger title
+    fontSize: '24px',
     fontWeight: '700',
-    borderBottom: '1px solid #3c4e62', // Slightly lighter border
+    borderBottom: '1px solid #3c4e62',
     paddingBottom: '20px',
   },
   welcomeText: {
@@ -82,35 +82,35 @@ const styles = {
     listStyle: 'none',
     padding: '0',
     margin: '0',
-    flexGrow: 1, /* Allows nav list to take available space */
+    flexGrow: 1,
   },
   navItem: {
-    marginBottom: '12px', // More spacing between items
+    marginBottom: '12px',
   },
   navLink: {
-    color: '#ecf0f1', // Lighter text color
+    color: '#ecf0f1',
     textDecoration: 'none',
-    padding: '12px 18px', // More padding
+    padding: '12px 18px',
     display: 'block',
-    borderRadius: '8px', // More rounded corners
+    borderRadius: '8px',
     transition: 'background-color 0.2s ease, color 0.2s ease',
     fontSize: '16px',
     fontWeight: '500',
   },
   navLinkHover: {
-    backgroundColor: '#3c4e62', // Darker hover state
+    backgroundColor: '#3c4e62',
     color: '#ffffff',
   },
   logoutButton: {
-    marginTop: '60px', // More margin from nav list
+    marginTop: '60px',
     width: '100%',
-    padding: '14px 20px', // Larger button
-    backgroundColor: '#e74c3c', // Red color
+    padding: '14px 20px',
+    backgroundColor: '#e74c3c',
     color: 'white',
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '17px', // Larger font
+    fontSize: '17px',
     fontWeight: 'bold',
     transition: 'background-color 0.2s ease',
   },
@@ -119,38 +119,38 @@ const styles = {
   },
   mainContent: {
     flex: 1,
-    padding: '40px', // More padding for main content
-    overflowY: 'auto', /* Add scroll for content if it overflows */
-    backgroundColor: '#f8f9fa', // Lighter background for main content area
+    padding: '40px',
+    overflowY: 'auto',
+    backgroundColor: '#f8f9fa',
   },
   mainContentTitle: {
     marginBottom: '30px',
-    color: '#2c3e50', // Darker title color
-    fontSize: '32px', // Larger title
+    color: '#2c3e50',
+    fontSize: '32px',
     fontWeight: '700',
   },
   mainContentText: {
     color: '#666',
     fontSize: '17px',
     lineHeight: '1.6',
-    marginBottom: '40px', // More space below intro text
+    marginBottom: '40px',
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', // Adjust min width for cards
-    gap: '25px', // More gap between cards
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '25px',
     marginTop: '30px',
   },
   statCard: {
     backgroundColor: 'white',
-    padding: '25px', // More padding
-    borderRadius: '10px', // More rounded
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)', // Stronger shadow
+    padding: '25px',
+    borderRadius: '10px',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)',
     textAlign: 'center',
-    borderLeft: '5px solid #007bff', // Accent border
+    borderLeft: '5px solid #007bff',
   },
   statNumber: {
-    fontSize: '40px', // Larger numbers
+    fontSize: '40px',
     fontWeight: 'bold',
     color: '#007bff',
     marginTop: '15px',

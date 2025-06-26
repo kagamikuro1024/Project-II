@@ -21,18 +21,23 @@ import {
 import { useNavigation } from "@react-navigation/native";
 
 const CartScreen = () => {
+  // Lấy dữ liệu giỏ hàng từ Redux store
   const cart = useSelector((state) => state.cart.cart);
-  console.log(cart);
+  // Tính tổng giá trị giỏ hàng
   const total = cart
     ?.map((item) => item.price * item.quantity)
     .reduce((curr, prev) => curr + prev, 0);
   const dispatch = useDispatch();
+
+  // Tăng số lượng sản phẩm
   const increaseQuantity = (item) => {
     dispatch(incementQuantity(item));
   };
+  // Giảm số lượng sản phẩm
   const decreaseQuantity = (item) => {
     dispatch(decrementQuantity(item));
   };
+  // Xóa sản phẩm khỏi giỏ hàng
   const deleteItem = (item) => {
     dispatch(removeFromCart(item));
   };
@@ -114,7 +119,7 @@ const CartScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-        {/* Subtotal and Proceed to Buy */}
+        {/* Tổng phụ và nút tiến hành mua */}
         <View style={styles.summaryContainer}>
           <Text style={styles.subtotalText}>
             Subtotal:{" "}
@@ -123,7 +128,7 @@ const CartScreen = () => {
           <Text style={styles.emiDetails}>EMI details Available</Text>
 
           <Pressable
-            onPress={() => navigation.navigate("Confirm")}
+            onPress={() => navigation.navigate("Confirm")} // Chuyển hướng đến màn hình xác nhận
             style={styles.proceedButton}
           >
             <Text style={styles.proceedButtonText}>
@@ -134,7 +139,7 @@ const CartScreen = () => {
 
         <View style={styles.divider} />
 
-        {/* Cart Items */}
+        {/* Các mặt hàng trong giỏ hàng */}
         <View style={styles.cartItemsContainer}>
           {cart?.map((item, index) => (
             <View key={index} style={styles.productCard}>
@@ -157,14 +162,14 @@ const CartScreen = () => {
                 <View style={styles.quantityButtonsGroup}>
                   {item?.quantity > 1 ? (
                     <Pressable
-                      onPress={() => decreaseQuantity(item)}
+                      onPress={() => decreaseQuantity(item)} // Giảm số lượng
                       style={styles.quantityButton}
                     >
                       <AntDesign name="minus" size={20} color="black" />
                     </Pressable>
                   ) : (
                     <Pressable
-                      onPress={() => deleteItem(item)}
+                      onPress={() => deleteItem(item)} // Xóa sản phẩm nếu số lượng là 1
                       style={styles.quantityButton}
                     >
                       <AntDesign name="delete" size={20} color="black" />
@@ -176,7 +181,7 @@ const CartScreen = () => {
                   </View>
 
                   <Pressable
-                    onPress={() => increaseQuantity(item)}
+                    onPress={() => increaseQuantity(item)} // Tăng số lượng
                     style={styles.quantityButton}
                   >
                     <Feather name="plus" size={20} color="black" />
@@ -184,7 +189,7 @@ const CartScreen = () => {
                 </View>
 
                 <Pressable
-                  onPress={() => deleteItem(item)}
+                  onPress={() => deleteItem(item)} // Xóa sản phẩm
                   style={styles.actionButton}
                 >
                   <Text style={styles.actionButtonText}>Delete</Text>
@@ -197,7 +202,9 @@ const CartScreen = () => {
                 </Pressable>
 
                 <Pressable style={styles.actionButton}>
-                  <Text style={styles.actionButtonText}>See More Like this</Text>
+                  <Text style={styles.actionButtonText}>
+                    See More Like this
+                  </Text>
                 </Pressable>
               </View>
             </View>

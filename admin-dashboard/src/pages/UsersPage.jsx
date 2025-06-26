@@ -1,12 +1,13 @@
 // admin-dashboard/src/pages/UsersPage.jsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { getAllUsers, updateUser, deleteUser } from '../api/adminApi.js'; // Ensure .js extension
+import { getAllUsers, updateUser, deleteUser } from '../api/adminApi.js';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Hàm để lấy danh sách người dùng từ API
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -20,25 +21,28 @@ const UsersPage = () => {
     }
   }, []);
 
+  // Gọi fetchUsers khi component được mount
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Xử lý thay đổi vai trò người dùng
   const handleRoleChange = async (userId, newRole) => {
     try {
       await updateUser(userId, { role: newRole });
-      await fetchUsers();
+      await fetchUsers(); // Tải lại danh sách người dùng sau khi cập nhật
       alert('User role updated successfully!');
     } catch (err) {
       alert(`Failed to update user role: ${err.message}`);
     }
   };
 
+  // Xử lý xóa người dùng
   const handleDeleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
         await deleteUser(userId);
-        await fetchUsers();
+        await fetchUsers(); // Tải lại danh sách người dùng sau khi xóa
         alert('User deleted successfully!');
       } catch (err) {
         alert(`Failed to delete user: ${err.message}`);
@@ -65,7 +69,7 @@ const UsersPage = () => {
           </tr>
         </thead>
         <tbody>
-          {users.map((user, index) => ( // Added index for alternating rows
+          {users.map((user, index) => (
             <tr key={user._id} style={{ ...styles.tableRow, ...(index % 2 === 0 ? styles.evenRow : styles.oddRow) }}>
               <td style={styles.tableCell}>{user._id}</td>
               <td style={styles.tableCell}>{user.name}</td>
@@ -73,7 +77,7 @@ const UsersPage = () => {
               <td style={styles.tableCell}>
                 <select
                   value={user.role}
-                  onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                  onChange={(e) => handleRoleChange(user._id, e.target.value)} // Gọi hàm thay đổi vai trò
                   style={styles.selectInput}
                 >
                   <option value="user">User</option>
@@ -83,7 +87,7 @@ const UsersPage = () => {
               <td style={styles.tableCell}>{user.verified ? 'Yes' : 'No'}</td>
               <td style={styles.tableCell}>
                 <button
-                  onClick={() => handleDeleteUser(user._id)}
+                  onClick={() => handleDeleteUser(user._id)} // Gọi hàm xóa người dùng
                   style={styles.deleteButton}
                 >
                   Delete
@@ -100,87 +104,84 @@ const UsersPage = () => {
 // Basic inline styles (Consider moving to a separate CSS file or using Tailwind/Styled Components)
 const styles = {
   pageContainer: {
-    padding: '30px', // Increased padding
+    padding: '30px',
     backgroundColor: '#fff',
-    borderRadius: '10px', // More rounded
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)', // Stronger shadow
-    margin: '20px auto', // Add margin for spacing from dashboard edges
-    maxWidth: '1200px', // Max width for content
+    borderRadius: '10px',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)',
+    margin: '20px auto',
+    maxWidth: '1200px',
   },
   pageHeading: {
-    marginBottom: '25px', // More spacing
-    color: '#2c3e50', // Darker heading color
+    marginBottom: '25px',
+    color: '#2c3e50',
     textAlign: 'center',
     fontSize: '28px',
     fontWeight: '700',
   },
   statusText: {
     textAlign: 'center',
-    marginTop: '30px', // More spacing
+    marginTop: '30px',
     fontSize: '18px',
     color: '#666',
   },
   table: {
     width: '100%',
-    borderCollapse: 'separate', // Use separate for rounded corners on cells/rows if desired later
-    borderSpacing: '0 8px', // Space between rows (for more distinct rows)
+    borderCollapse: 'separate',
+    borderSpacing: '0 8px',
     marginTop: '25px',
   },
   tableHeaderRow: {
-    backgroundColor: '#eef2f7', // Lighter header background
-    borderBottom: 'none', // Remove border as spacing is handled by borderSpacing
-    borderRadius: '8px', // Rounded corners for header row
-    overflow: 'hidden', // Ensure rounded corners apply
+    backgroundColor: '#eef2f7',
+    borderBottom: 'none',
+    borderRadius: '8px',
+    overflow: 'hidden',
   },
   tableHeaderCell: {
-    padding: '15px 20px', // More padding
+    padding: '15px 20px',
     textAlign: 'left',
-    color: '#444', // Darker header text
+    color: '#444',
     fontWeight: 'bold',
     fontSize: '15px',
-    textTransform: 'uppercase', // Uppercase header text
+    textTransform: 'uppercase',
   },
   tableRow: {
-    backgroundColor: 'white', // Default background
-    borderRadius: '8px', // Rounded corners for rows
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)', // Subtle shadow for rows
-    transition: 'transform 0.1s ease', // Smooth transition for hover
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+    transition: 'transform 0.1s ease',
   },
   evenRow: {
-    // backgroundColor: '#f9f9f9', // Slightly different background for even rows if desired
+    // backgroundColor: '#f9f9f9',
   },
   oddRow: {
     // backgroundColor: '#ffffff',
   },
-  tableRowHover: { // Idea for hover effect
+  tableRowHover: {
     transform: 'translateY(-2px)',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
   },
   tableCell: {
-    padding: '15px 20px', // Consistent padding
+    padding: '15px 20px',
     color: '#333',
     fontSize: '15px',
-    // Apply rounded corners to first/last cells if row is rounded
-    // borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px' for first
-    // borderTopRightRadius: '8px', borderBottomRightRadius: '8px' for last
   },
   selectInput: {
-    padding: '8px 12px', // More padding
-    borderRadius: '6px', // More rounded
-    border: '1px solid #999', /* Stronger border for visibility */
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #999',
     backgroundColor: 'white',
-    minWidth: '100px', // Consistent width
+    minWidth: '100px',
     fontSize: '14px',
-    color: '#333', /* Ensure text color is visible */
+    color: '#333',
     cursor: 'pointer',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)', /* Subtle shadow for dropdown */
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
   },
   deleteButton: {
-    backgroundColor: '#e74c3c', // Red color
+    backgroundColor: '#e74c3c',
     color: 'white',
-    padding: '10px 15px', // More padding
+    padding: '10px 15px',
     border: 'none',
-    borderRadius: '6px', // More rounded
+    borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',

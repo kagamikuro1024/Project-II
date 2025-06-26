@@ -60,11 +60,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // NEW: Add orderStatus field
   orderStatus: {
     type: String,
-    enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'], // Allowed values
-    default: 'Pending', // Default status for new orders
+    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+    default: "Pending", // Default status for new orders
     required: true,
   },
   createdAt: {
@@ -73,7 +72,6 @@ const orderSchema = new mongoose.Schema({
   },
 });
 
-
-const Order = mongoose.model("Order",orderSchema);
+const Order = mongoose.model("Order", orderSchema);
 
 module.exports = Order;

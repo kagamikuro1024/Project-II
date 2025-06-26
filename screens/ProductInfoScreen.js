@@ -26,14 +26,17 @@ const ProductInfoScreen = () => {
   const height = width * 0.8;
   const dispatch = useDispatch();
 
+  // Thêm sản phẩm vào giỏ hàng
   const addItemToCart = (item) => {
     setAddedToCart(true);
     dispatch(addToCart(item));
+    // Đặt lại trạng thái sau 6 giây
     setTimeout(() => {
       setAddedToCart(false);
     }, 6000);
   };
 
+  // Lấy dữ liệu giỏ hàng từ Redux store
   const cart = useSelector((state) => state.cart.cart);
 
   return (
@@ -61,6 +64,7 @@ const ProductInfoScreen = () => {
           showsHorizontalScrollIndicator={false}
           style={styles.carouselContainer}
         >
+          {/* Hiển thị ảnh sản phẩm từ carouselImages */}
           {route.params.carouselImages.map((item, index) => (
             <ImageBackground
               style={[styles.carouselImage, { width, height }]}
@@ -120,7 +124,7 @@ const ProductInfoScreen = () => {
 
         <View style={styles.buttonContainer}>
           <Pressable
-            onPress={() => addItemToCart(route.params?.item)}
+            onPress={() => addItemToCart(route.params?.item)} // Gọi hàm thêm vào giỏ hàng
             style={({ pressed }) => [
               styles.actionButton,
               styles.addToCartButton,
@@ -136,7 +140,7 @@ const ProductInfoScreen = () => {
 
           <Pressable
             onPress={() => {
-              dispatch(addToCart(route.params?.item));
+              dispatch(addToCart(route.params?.item)); // Thêm sản phẩm vào giỏ hàng và chuyển hướng
               navigation.navigate("Main", { screen: "Cart" });
             }}
             style={({ pressed }) => [

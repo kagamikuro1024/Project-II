@@ -21,6 +21,8 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const navigation = useNavigation();
+
+  // Xử lý đăng ký người dùng
   const handleRegister = () => {
     const user = {
       name: name,
@@ -28,20 +30,23 @@ const RegisterScreen = () => {
       password: password,
     };
 
-/// Validate input fields
+    // Gửi yêu cầu POST đến API đăng ký
     axios
       .post("http://10.0.2.2:8000/register", user)
       .then((response) => {
         console.log(response);
+        // Hiển thị thông báo thành công
         Alert.alert(
           "Registration successful",
           "You have been registered Successfully"
         );
+        // Đặt lại các trường nhập liệu
         setName("");
         setEmail("");
         setPassword("");
       })
       .catch((error) => {
+        // Hiển thị thông báo lỗi
         Alert.alert(
           "Registration Error",
           "An error occurred while registering"
@@ -49,9 +54,15 @@ const RegisterScreen = () => {
         console.log("registration failed", error);
       });
   };
+
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: "white", alignItems: "center",marginTop:50  }}
+      style={{
+        flex: 1,
+        backgroundColor: "white",
+        alignItems: "center",
+        marginTop: 50,
+      }}
     >
       <View>
         <Image
@@ -179,13 +190,12 @@ const RegisterScreen = () => {
             alignItems: "center",
             justifyContent: "space-between",
           }}
-        >
-        </View>
+        ></View>
 
         <View style={{ marginTop: 80 }} />
 
         <Pressable
-          onPress={handleRegister}
+          onPress={handleRegister} // Gọi hàm xử lý đăng ký khi nhấn
           style={{
             width: 200,
             backgroundColor: "#89CFF0",
@@ -208,7 +218,7 @@ const RegisterScreen = () => {
         </Pressable>
 
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.goBack()} // Quay lại màn hình trước
           style={{ marginTop: 15 }}
         >
           <Text style={{ textAlign: "center", color: "gray", fontSize: 16 }}>

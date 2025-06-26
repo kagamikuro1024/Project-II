@@ -24,9 +24,9 @@ const AddAddressScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Lấy danh sách địa chỉ người dùng
   const fetchAddresses = useCallback(async () => {
     if (!userId) {
-      console.log("User ID not available, skipping address fetch.");
       setAddresses([]);
       setIsLoading(false);
       return;
@@ -35,11 +35,15 @@ const AddAddressScreen = () => {
     try {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) {
-        Alert.alert("Authentication Error", "No token found. Please log in again.");
+        Alert.alert(
+          "Authentication Error",
+          "No token found. Please log in again."
+        );
         navigation.replace("Login");
         return;
       }
 
+      // Gửi yêu cầu lấy địa chỉ
       const response = await axios.get(
         `http://10.0.2.2:8000/addresses/${userId}`,
         {
@@ -50,11 +54,19 @@ const AddAddressScreen = () => {
       );
       setAddresses(response.data.addresses || []);
     } catch (error) {
-      console.log("Error fetching addresses:", error.response ? error.response.data : error.message);
       setAddresses([]);
-      Alert.alert("Error", `Failed to load address list: ${error.response?.data?.message || error.message}.`);
+      Alert.alert(
+        "Error",
+        `Failed to load address list: ${
+          error.response?.data?.message || error.message
+        }.`
+      );
+      // Xử lý lỗi xác thực
       if (error.response?.status === 401 || error.response?.status === 403) {
-        Alert.alert("Session Expired", "Your session has expired. Please log in again.");
+        Alert.alert(
+          "Session Expired",
+          "Your session has expired. Please log in again."
+        );
         navigation.replace("Login");
       }
     } finally {
@@ -62,12 +74,14 @@ const AddAddressScreen = () => {
     }
   }, [userId, navigation]);
 
+  // Gọi fetchAddresses khi userId thay đổi
   useEffect(() => {
     if (userId) {
       fetchAddresses();
     }
   }, [userId, fetchAddresses]);
 
+  // Gọi fetchAddresses khi màn hình được focus
   useFocusEffect(
     useCallback(() => {
       if (userId) {
@@ -78,26 +92,44 @@ const AddAddressScreen = () => {
     }, [userId, fetchAddresses])
   );
 
+  // Xử lý chỉnh sửa địa chỉ (chức năng đang phát triển)
   const handleEditAddress = (addressId) => {
-    Alert.alert("Edit", `Edit address: ${addressId} function is under development.`);
+    Alert.alert(
+      "Edit",
+      `Edit address: ${addressId} function is under development.`
+    );
   };
 
+  // Xử lý xóa địa chỉ (chức năng đang phát triển)
   const handleRemoveAddress = (addressId) => {
-    Alert.alert("Delete", `Are you sure you want to delete this address? (${addressId})`, [
-      { text: "Cancel" },
-      { text: "Delete", onPress: () => {
-          console.log("Deleting address", addressId);
-          Alert.alert("Delete", "Address deletion function is under development.");
-        }
-      },
-    ]);
+    Alert.alert(
+      "Delete",
+      `Are you sure you want to delete this address? (${addressId})`,
+      [
+        { text: "Cancel" },
+        {
+          text: "Delete",
+          onPress: () => {
+            Alert.alert(
+              "Delete",
+              "Address deletion function is under development."
+            );
+          },
+        },
+      ]
+    );
   };
 
+  // Xử lý đặt địa chỉ làm mặc định (chức năng đang phát triển)
   const handleSetAsDefault = (addressId) => {
-    Alert.alert("Set as Default", `Set address ${addressId} as default function is under development.`);
+    Alert.alert(
+      "Set as Default",
+      `Set address ${addressId} as default function is under development.`
+    );
   };
 
-  const filteredAddresses = addresses.filter(addr => {
+  // Lọc địa chỉ theo truy vấn tìm kiếm
+  const filteredAddresses = addresses.filter((addr) => {
     const query = searchQuery.toLowerCase();
     return (
       addr.name?.toLowerCase().includes(query) ||
@@ -115,7 +147,7 @@ const AddAddressScreen = () => {
     <>
       <StatusBar backgroundColor="#00CED1" barStyle="light-content" />
       <View style={styles.safeArea}>
-        {/* Header with Search */}
+        {/* Header với tìm kiếm */}
         <View style={styles.header}>
           <View style={styles.searchContainer}>
             <AntDesign
@@ -132,80 +164,115 @@ const AddAddressScreen = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-          <Pressable onPress={() => Alert.alert("Mic", "Voice search function coming soon!")}>
+          <Pressable
+            onPress={() =>
+              Alert.alert("Mic", "Voice search function coming soon!")
+            }
+          >
             <Feather name="mic" size={24} color="white" />
           </Pressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollViewContent}
+        >
           <View style={styles.contentContainer}>
             <View style={styles.titleContainer}>
-                <Text style={styles.title}>Your Addresses</Text>
-                {isLoading && <ActivityIndicator size="small" color="#007BFF" />}
+              <Text style={styles.title}>Your Addresses</Text>
+              {isLoading && <ActivityIndicator size="small" color="#007BFF" />}
             </View>
 
-
-            {/* Add New Address Button */}
+            {/* Nút Thêm địa chỉ mới */}
             <Pressable
               onPress={() => navigation.navigate("Add")}
               style={styles.addNewButton}
             >
               <AntDesign name="pluscircleo" size={22} color="#007BFF" />
               <Text style={styles.addNewButtonText}>Add a new address</Text>
-              <MaterialIcons name="keyboard-arrow-right" size={24} color="#007BFF" />
+              <MaterialIcons
+                name="keyboard-arrow-right"
+                size={24}
+                color="#007BFF"
+              />
             </Pressable>
 
-            {/* Addresses List */}
+            {/* Danh sách địa chỉ */}
             {!isLoading && filteredAddresses.length === 0 && (
               <View style={styles.emptyContainer}>
                 <MaterialIcons name="location-off" size={60} color="#CBD5E0" />
                 <Text style={styles.emptyText}>
-                  {searchQuery ? "No matching addresses found." : "You don't have any saved addresses."}
+                  {searchQuery
+                    ? "No matching addresses found."
+                    : "You don't have any saved addresses."}
                 </Text>
                 <Text style={styles.emptySubText}>
-                  {searchQuery ? "Try changing your search keywords." : "Add a new address to easily shop."}
+                  {searchQuery
+                    ? "Try changing your search keywords."
+                    : "Add a new address to easily shop."}
                 </Text>
               </View>
             )}
 
             {filteredAddresses.map((item) => (
-              <Pressable key={item._id || item.id} style={styles.addressCard} onPress={() => console.log("Selected address:", item.name)}>
+              <Pressable
+                key={item._id || item.id}
+                style={styles.addressCard}
+                onPress={() => console.log("Selected address:", item.name)}
+              >
                 <View style={styles.cardHeader}>
                   <Text style={styles.addressName}>{item?.name}</Text>
                   <Entypo name="location-pin" size={24} color="#FF6347" />
                 </View>
 
                 <Text style={styles.addressDetail}>
-                  {item?.houseNo}{item?.landmark ? `, ${item?.landmark}` : ''}
+                  {item?.houseNo}
+                  {item?.landmark ? `, ${item?.landmark}` : ""}
                 </Text>
                 <Text style={styles.addressDetail}>{item?.street}</Text>
                 {item?.city && item?.country && (
-                  <Text style={styles.addressDetail}>{item?.city}, {item?.country}</Text>
+                  <Text style={styles.addressDetail}>
+                    {item?.city}, {item?.country}
+                  </Text>
                 )}
-                <Text style={styles.addressDetail}>Phone: {item?.mobileNo}</Text>
-                <Text style={styles.addressDetail}>Postal Code: {item?.postalCode}</Text>
+                <Text style={styles.addressDetail}>
+                  Phone: {item?.mobileNo}
+                </Text>
+                <Text style={styles.addressDetail}>
+                  Postal Code: {item?.postalCode}
+                </Text>
 
                 <View style={styles.actionsContainer}>
                   <Pressable
                     style={[styles.actionButton, styles.editButton]}
-                    onPress={() => handleEditAddress(item._id || item.id)}
+                    onPress={() => handleEditAddress(item._id || item.id)} // Gọi hàm chỉnh sửa địa chỉ
                   >
                     <Feather name="edit-2" size={16} color="#2E86C1" />
-                    <Text style={[styles.actionButtonText, styles.editText]}>Edit</Text>
+                    <Text style={[styles.actionButtonText, styles.editText]}>
+                      Edit
+                    </Text>
                   </Pressable>
                   <Pressable
                     style={[styles.actionButton, styles.removeButton]}
-                    onPress={() => handleRemoveAddress(item._id || item.id)}
+                    onPress={() => handleRemoveAddress(item._id || item.id)} // Gọi hàm xóa địa chỉ
                   >
                     <Feather name="trash-2" size={16} color="#CB4335" />
-                    <Text style={[styles.actionButtonText, styles.removeText]}>Delete</Text>
+                    <Text style={[styles.actionButtonText, styles.removeText]}>
+                      Delete
+                    </Text>
                   </Pressable>
                   <Pressable
                     style={[styles.actionButton, styles.defaultButton]}
-                    onPress={() => handleSetAsDefault(item._id || item.id)}
+                    onPress={() => handleSetAsDefault(item._id || item.id)} // Gọi hàm đặt làm mặc định
                   >
-                    <MaterialIcons name="star-outline" size={16} color="#1E8449" />
-                    <Text style={[styles.actionButtonText, styles.defaultText]}>Default</Text>
+                    <MaterialIcons
+                      name="star-outline"
+                      size={16}
+                      color="#1E8449"
+                    />
+                    <Text style={[styles.actionButtonText, styles.defaultText]}>
+                      Default
+                    </Text>
                   </Pressable>
                 </View>
               </Pressable>
@@ -228,7 +295,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#00CED1",
     paddingHorizontal: 15,
     paddingVertical: 12,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 12,
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight + 10 : 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -261,9 +328,9 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   titleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 15,
   },
   title: {
@@ -306,13 +373,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#718096",
     marginTop: 15,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptySubText: {
     fontSize: 14,
     color: "#A0AEC0",
     marginTop: 5,
-    textAlign: 'center',
+    textAlign: "center",
   },
   addressCard: {
     backgroundColor: "white",

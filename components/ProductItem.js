@@ -5,13 +5,17 @@ import { addToCart } from "../redux/CartReducer";
 const ProductItem = ({ item }) => {
   const [addedToCart, setAddedToCart] = useState(false);
   const dispatch = useDispatch();
+
+  // Thêm sản phẩm vào giỏ hàng
   const addItemToCart = (item) => {
     setAddedToCart(true);
     dispatch(addToCart(item));
+    // Đặt lại trạng thái "addedToCart" sau 6 giây
     setTimeout(() => {
       setAddedToCart(false);
-    }, 6000);
+    }, 3000);
   };
+
   return (
     <Pressable style={{ marginHorizontal: 20, marginVertical: 20 }}>
       <Image
@@ -36,24 +40,36 @@ const ProductItem = ({ item }) => {
         </Text>
       </View>
       <Pressable
-      onPress={() => addItemToCart(item)}
-      style={({ pressed }) => ({
-        backgroundColor: addedToCart ? "#82E0AA" : "#F8C471", // Màu xanh khi đã thêm vào giỏ
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 25,
-        marginTop: 10,
-        alignItems: "center",
-        justifyContent: "center",
-        marginHorizontal: 10,
-        elevation: 3,
-        opacity: pressed ? 0.85 : 1,
-        transform: [{ scale: pressed ? 0.98 : 1 }],
-      })}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {addedToCart ? (
-          <>
+        onPress={() => addItemToCart(item)} // Gọi hàm thêm sản phẩm vào giỏ hàng
+        style={({ pressed }) => ({
+          backgroundColor: addedToCart ? "#82E0AA" : "#F8C471", // Thay đổi màu nền khi sản phẩm được thêm vào giỏ
+          paddingVertical: 12,
+          paddingHorizontal: 20,
+          borderRadius: 25,
+          marginTop: 10,
+          alignItems: "center",
+          justifyContent: "center",
+          marginHorizontal: 10,
+          elevation: 3,
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        })}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {addedToCart ? (
+            <>
+              <Text
+                style={{
+                  color: "#000000",
+                  fontSize: 16,
+                  fontWeight: "bold",
+                  textAlign: "center",
+                }}
+              >
+                Added to cart
+              </Text>
+            </>
+          ) : (
             <Text
               style={{
                 color: "#000000",
@@ -62,23 +78,11 @@ const ProductItem = ({ item }) => {
                 textAlign: "center",
               }}
             >
-              Added to cart 
+              Add to cart
             </Text>
-          </>
-        ) : (
-          <Text
-            style={{
-              color: "#000000",
-              fontSize: 16,
-              fontWeight: "bold",
-              textAlign: "center",
-            }}
-          >
-            Add to cart
-          </Text>
-        )}
-      </View>
-    </Pressable>
+          )}
+        </View>
+      </Pressable>
     </Pressable>
   );
 };
