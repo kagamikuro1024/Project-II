@@ -1,4 +1,5 @@
 import {
+  Image, // Import Image for MoMo logo
   StyleSheet,
   Text,
   View,
@@ -7,6 +8,9 @@ import {
   Alert,
   SafeAreaView,
   Platform,
+  Modal, // Import Modal from react-native
+  ActivityIndicator, // Used for loading state in modal
+  TextInput, // Used for phone and PIN input in modal
 } from "react-native";
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
@@ -16,7 +20,7 @@ import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { useDispatch, useSelector } from "react-redux";
 import { cleanCart } from "../redux/CartReducer";
 import { useNavigation } from "@react-navigation/native";
-import RazorpayCheckout from "react-native-razorpay";
+// import RazorpayCheckout from "react-native-razorpay"; // REMOVED: No longer needed
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ConfirmationScreen = () => {
@@ -34,6 +38,12 @@ const ConfirmationScreen = () => {
   const total = cart
     ?.map((item) => item.price * item.quantity)
     .reduce((curr, prev) => curr + prev, 0);
+
+  const [showFakePaymentModal, setShowFakePaymentModal] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState(''); // NEW STATE: for phone number in modal
+  const [paymentPin, setPaymentPin] = useState('');     // NEW STATE: for payment PIN in modal
+  const [fakePaymentError, setFakePaymentError] = useState(''); // NEW STATE: for error in modal
 
   // Common authentication error handler
   const handleAuthError = async (error) => {
@@ -84,15 +94,15 @@ const ConfirmationScreen = () => {
   };
   const dispatch = useDispatch();
   const [selectedAddress, setSelectedAdress] = useState("");
-  const [option, setOption] = useState(false); // This is for delivery option, not payment
-  const [selectedOption, setSelectedOption] = useState(""); // This is for payment method
+  const [option, setOption] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (finalPaymentMethod) => {
     if (!selectedAddress) {
       Alert.alert("Missing Information", "Please select a delivery address.");
       return;
     }
-    if (!selectedOption) {
+    if (!finalPaymentMethod) {
       Alert.alert("Missing Information", "Please select a payment method.");
       return;
     }
@@ -110,7 +120,7 @@ const ConfirmationScreen = () => {
         cartItems: cart,
         totalPrice: total,
         shippingAddress: selectedAddress,
-        paymentMethod: selectedOption,
+        paymentMethod: finalPaymentMethod,
       };
 
       const response = await axios.post(
@@ -128,7 +138,7 @@ const ConfirmationScreen = () => {
           cartItems: cart,
           totalPrice: total,
           shippingAddress: selectedAddress,
-          paymentMethod: selectedOption,
+          paymentMethod: finalPaymentMethod,
         });
         dispatch(cleanCart());
         console.log("Order created successfully", response.data);
@@ -146,78 +156,44 @@ const ConfirmationScreen = () => {
     }
   };
 
+  // Modified: pay() now just opens the fake payment modal
   const pay = async () => {
     if (!selectedAddress) {
       Alert.alert("Missing Address", "Please select a delivery address before proceeding to payment.");
       return;
     }
-    try {
-      const options = {
-        description: "Click_buy Order Payment",
-        currency: "INR",
-        name: "Click_Buy.in",
-        key: "rzp_test_E3GWYimxN7YMk8",
-        amount: total * 100,
-        prefill: {
-          email: "customer@example.com", // Replace with actual user email
-          contact: "9999999999", // Replace with actual user contact
-          name: "Customer Name", // Replace with actual user name
-        },
-        theme: { color: "#00CED1" },
-      };
+    setFakePaymentError(''); // Clear previous errors
+    setPhoneNumber(''); // Clear previous inputs
+    setPaymentPin('');
+    setShowFakePaymentModal(true);
+  };
 
-      const data = await RazorpayCheckout.open(options);
-      console.log("Razorpay success:", data);
+  // NEW: handle simulated payment outcome with MoMoPay logic
+  const handleSimulatedMoMoPay = async () => {
+    setFakePaymentError(''); // Clear errors for new attempt
 
-      const token = await AsyncStorage.getItem("authToken");
-      if (!token) {
-        Alert.alert("Error", "No authentication token found. Please log in again.");
-        navigation.replace("Login");
-        return;
-      }
+    if (!phoneNumber.trim() || !paymentPin.trim()) {
+      setFakePaymentError('Please enter both phone number and PIN.');
+      return;
+    }
+    if (phoneNumber.trim().length < 9) { // Basic phone number validation
+      setFakePaymentError('Invalid phone number length.');
+      return;
+    }
+    if (paymentPin !== '123456') { // Specific PIN for success
+      setFakePaymentError('Incorrect PIN. Payment failed.');
+    }
 
-      const orderData = {
-        userId: userId,
-        cartItems: cart,
-        totalPrice: total,
-        shippingAddress: selectedAddress,
-        paymentMethod: "card",
-      };
+    setPaymentProcessing(true); // Indicate processing
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+    setPaymentProcessing(false); // End processing
 
-      const response = await axios.post(
-        "http://10.0.2.2:8000/orders",
-        orderData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 200) {
-        navigation.navigate("Order", {
-          cartItems: cart,
-          totalPrice: total,
-          shippingAddress: selectedAddress,
-          paymentMethod: "card",
-        });
-        dispatch(cleanCart());
-        console.log("Order created successfully after payment:", response.data);
-      } else {
-        Alert.alert("Order Error", "An error occurred while creating your order after payment. Please try again.");
-        console.log("Error creating order after payment:", response.data);
-      }
-    } catch (error) {
-      console.log("Error during payment or order creation:", error.code, error.description);
-      Alert.alert(
-        "Payment Failed",
-        `There was an issue with your payment: ${error.description || "Unknown error"}. Please try again.`
-      );
-      if (error.code === 'PAYMENT_CANCELLED') {
-        console.log('Payment cancelled by user.');
-      } else if (error.response?.status === 401 || error.response?.status === 403) {
-        handleAuthError(error);
-      }
+    if (paymentPin === '123456') {
+      setShowFakePaymentModal(false); // Close modal
+      Alert.alert("Payment Successful", "Your MoMoPay payment has been successfully processed.");
+      handlePlaceOrder("card"); // Proceed with order creation as 'card' payment
+    } else {
+      // Error already set by initial check. Keep modal open for retry.
     }
   };
 
@@ -386,7 +362,10 @@ const ConfirmationScreen = () => {
             <Text style={styles.sectionTitle}>Select your payment Method</Text>
 
             <Pressable
-              onPress={() => setSelectedOption("cash")}
+              onPress={() => {
+                setSelectedOption("cash");
+                handlePlaceOrder("cash");
+              }}
               style={[
                 styles.paymentMethodCard,
                 selectedOption === "cash" && styles.paymentMethodCardSelected,
@@ -403,20 +382,7 @@ const ConfirmationScreen = () => {
             <Pressable
               onPress={() => {
                 setSelectedOption("card");
-                Alert.alert("Online Payment", "You will be redirected to the payment gateway to complete the transaction. Continue?", [
-                  {
-                    text: "Cancel",
-                    onPress: () => {
-                        setSelectedOption("");
-                        console.log("Cancel payment is pressed");
-                    },
-                    style: "cancel",
-                  },
-                  {
-                    text: "OK",
-                    onPress: () => pay(),
-                  },
-                ]);
+                pay(); // Show fake payment modal
               }}
               style={[
                 styles.paymentMethodCard,
@@ -429,18 +395,9 @@ const ConfirmationScreen = () => {
                 <Entypo name="circle" size={20} color="gray" />
               )}
               <Text style={styles.paymentMethodText}>
-                Credit / Debit Card
+                Credit / Debit Card (Simulated)
               </Text>
             </Pressable>
-
-            {selectedOption && (
-                <Pressable
-                    onPress={() => setCurrentStep(3)}
-                    style={styles.continueButton}
-                >
-                    <Text style={styles.continueButtonText}>Continue</Text>
-                </Pressable>
-            )}
           </View>
         )}
 
@@ -479,12 +436,12 @@ const ConfirmationScreen = () => {
               <Text style={styles.paymentMethodConfirmedText}>
                 {selectedOption === "cash"
                   ? "Pay on delivery (Cash)"
-                  : "Online Payment (Card)"}
+                  : "Online Payment (Simulated)"}
               </Text>
             </View>
 
             <Pressable
-              onPress={handlePlaceOrder}
+              onPress={() => handlePlaceOrder(selectedOption)}
               style={styles.placeOrderButton}
             >
               <Text style={styles.placeOrderButtonText}>Place your order</Text>
@@ -492,6 +449,74 @@ const ConfirmationScreen = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* NEW: Fake MoMoPay-like Payment Modal */}
+      <Modal
+        animationType="slide" // Use slide for a more "app-like" feel
+        transparent={true}
+        visible={showFakePaymentModal}
+        onRequestClose={() => setShowFakePaymentModal(false)}
+      >
+        <Pressable style={styles.fakePaymentModalOverlay} onPress={() => setShowFakePaymentModal(false)}>
+          <Pressable style={styles.fakePaymentModalContent} onPress={(e) => e.stopPropagation()}>
+            <Image
+              source={{ uri: 'https://cdn.icon-icons.com/icons2/2387/PNG/512/momo_logo_icon_145226.png' }} // MoMo-like logo
+              style={styles.momoLogo}
+            />
+            <Text style={styles.fakePaymentModalTitle}>MoMoPay - Simulated Gateway</Text>
+            <Text style={styles.fakePaymentModalAmount}>Payment Amount: ${total.toFixed(2)}</Text>
+            
+            {paymentProcessing ? (
+              <View style={styles.fakePaymentLoading}>
+                <ActivityIndicator size="large" color="#FF0077" /> {/* MoMo-like color */}
+                <Text style={styles.fakePaymentLoadingText}>Processing MoMoPay payment...</Text>
+              </View>
+            ) : (
+              <View style={styles.fakePaymentInputContainer}>
+                <Text style={styles.fakePaymentLabel}>Phone Number:</Text>
+                <TextInput
+                  style={styles.fakePaymentInput}
+                  keyboardType="phone-pad"
+                  placeholder="Enter MoMo phone number"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  maxLength={10}
+                />
+                <Text style={styles.fakePaymentLabel}>Payment PIN:</Text>
+                <TextInput
+                  style={styles.fakePaymentInput}
+                  keyboardType="numeric"
+                  placeholder="Enter 6-digit PIN"
+                  secureTextEntry={true}
+                  value={paymentPin}
+                  onChangeText={setPaymentPin}
+                  maxLength={6}
+                />
+                {fakePaymentError ? (
+                  <Text style={styles.fakePaymentErrorText}>{fakePaymentError}</Text>
+                ) : null}
+
+                <Pressable
+                  onPress={handleSimulatedMoMoPay}
+                  style={styles.fakePaymentButtonMoMo}
+                >
+                  <Text style={styles.fakePaymentButtonText}>Pay with MoMo</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setShowFakePaymentModal(false);
+                    setSelectedOption(""); // Clear selection if cancelled
+                    setFakePaymentError(''); // Clear error on close
+                  }}
+                  style={styles.fakePaymentButtonCancelMoMo}
+                >
+                  <Text style={styles.fakePaymentButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -827,4 +852,112 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: 'center',
   },
+  // START NEW STYLES FOR FAKE MOMOPAY MODAL
+  fakePaymentModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  fakePaymentModalContent: {
+    backgroundColor: '#FFFFFF', // White background
+    padding: 25,
+    borderRadius: 20, // More rounded corners
+    width: '85%', // Wider modal
+    maxWidth: 450, // Max width for larger screens
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4, // Stronger shadow
+    shadowRadius: 15,
+    elevation: 15,
+  },
+  momoLogo: {
+    width: 80,
+    height: 80,
+    resizeMode: 'contain',
+    marginBottom: 10,
+  },
+  fakePaymentModalTitle: {
+    fontSize: 24, // Larger title
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+    textAlign: 'center',
+  },
+  fakePaymentModalAmount: {
+    fontSize: 20, // Larger amount text
+    fontWeight: '700',
+    color: '#FF0077', // MoMo primary color
+    marginBottom: 25,
+  },
+  fakePaymentInputContainer: {
+    width: '100%', // Full width inputs
+    alignItems: 'flex-start', // Align labels to left
+  },
+  fakePaymentLabel: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
+  fakePaymentInput: {
+    width: '100%',
+    padding: 12, // More padding
+    borderWidth: 1,
+    borderColor: '#CCC', // Lighter border
+    borderRadius: 10, // More rounded
+    marginBottom: 15,
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: '#F8F8F8', // Slightly off-white background
+  },
+  fakePaymentErrorText: {
+    color: '#FF0000', // Red error text
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: '500',
+    width: '100%',
+  },
+  fakePaymentButtonMoMo: {
+    backgroundColor: '#FF0077', // MoMo primary color
+    paddingVertical: 14, // Larger button
+    borderRadius: 10, // More rounded
+    marginTop: 20, // More spacing
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  fakePaymentButtonCancelMoMo: {
+    backgroundColor: '#888888', // Grey for cancel
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 10,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fakePaymentButtonText: {
+    color: 'white',
+    fontSize: 18, // Larger font
+    fontWeight: 'bold',
+  },
+  fakePaymentLoading: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+  },
+  fakePaymentLoadingText: {
+    marginTop: 15,
+    fontSize: 17,
+    color: '#555',
+  },
+  // END NEW STYLES FOR FAKE MOMOPAY MODAL
 });
