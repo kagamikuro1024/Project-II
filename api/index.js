@@ -5,8 +5,6 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
-// KHUYẾN NGHỊ CAO: Import bcrypt để băm mật khẩu
-// const bcrypt = require('bcryptjs'); // npm install bcryptjs
 
 const app = express();
 const PORT = 8000;
@@ -32,11 +30,11 @@ mongoose
     console.error("MongoDB connection error:", err);
   });
 
-// Models (Đảm bảo file models/user.js đã được cập nhật để có trường 'role')
+// Models
 const User = require("./models/user");
 const Order = require("./models/order");
 
-// --- Helper functions (kept as is) ---
+// --- Helper functions (existing) ---
 const sendVerificationEmail = async (email, verificationToken) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -61,6 +59,62 @@ const sendVerificationEmail = async (email, verificationToken) => {
   }
 };
 
+// NEW: Helper function to send order confirmation email
+const sendOrderConfirmationEmail = async (userEmail, orderDetails) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "trung5kvshthlnqk38b@gmail.com",
+      pass: "rlrm tnxu dptd abxs",
+    },
+  });
+
+  let productListHtml = orderDetails.products.map(product => `
+    <li>
+      ${product.name} (x${product.quantity}) - $${product.price.toFixed(2)}
+    </li>
+  `).join('');
+
+  const mailOptions = {
+    from: "Click_Buy.com",
+    to: userEmail,
+    subject: `Order #${orderDetails._id.toString().slice(-6)} Confirmation - Click_Buy.com`,
+    html: `
+      <h2>Thank you for your order!</h2>
+      <p>Your order #${orderDetails._id.toString().slice(-6)} has been successfully placed.</p>
+      <h3>Order Details:</h3>
+      <ul>
+        <li><strong>Order ID:</strong> ${orderDetails._id}</li>
+        <li><strong>Total Price:</strong> $${orderDetails.totalPrice.toFixed(2)}</li>
+        <li><strong>Payment Method:</strong> ${orderDetails.paymentMethod === 'cash' ? 'Cash on Delivery' : 'Online Payment'}</li>
+        <li><strong>Order Status:</strong> ${orderDetails.orderStatus}</li>
+      </ul>
+      <h3>Shipping Address:</h3>
+      <p>
+        ${orderDetails.shippingAddress.name}<br>
+        ${orderDetails.shippingAddress.houseNo}, ${orderDetails.shippingAddress.street}<br>
+        ${orderDetails.shippingAddress.landmark ? orderDetails.shippingAddress.landmark + '<br>' : ''}
+        ${orderDetails.shippingAddress.postalCode}<br>
+        Phone: ${orderDetails.shippingAddress.mobileNo}
+      </p>
+      <h3>Products:</h3>
+      <ul>
+        ${productListHtml}
+      </ul>
+      <p>We will notify you once your order has been shipped.</p>
+      <p>Thank you for shopping with Click_Buy.com!</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Order confirmation email sent to ${userEmail} for order ${orderDetails._id}`);
+  } catch (error) {
+    console.error(`Error sending order confirmation email to ${userEmail}:`, error);
+  }
+};
+
+
 const generateSecretKey = () => {
   const secretKey = crypto.randomBytes(32).toString("hex");
   return secretKey;
@@ -68,7 +122,7 @@ const generateSecretKey = () => {
 
 const secretKey = generateSecretKey();
 
-// --- AUTHENTICATION AND AUTHORIZATION MIDDLEWARE (NEW) ---
+// --- AUTHENTICATION AND AUTHORIZATION MIDDLEWARE ---
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -99,7 +153,7 @@ const authorizeAdmin = async (req, res, next) => {
   }
 };
 
-// --- EXISTING ENDPOINTS (with minor adjustments or added security middleware) ---
+// --- EXISTING ENDPOINTS ---
 
 app.post("/register", async (req, res) => {
   try {
@@ -111,13 +165,13 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    // KHUYẾN NGHỊ: Băm mật khẩu trước khi lưu
+    // RECOMMENDED: Hash password before saving
     // const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
       name,
       email,
-      password: password,
+      password: password, // Replace with hashedPassword if using bcrypt
       role: 'user'
     });
 
@@ -165,11 +219,16 @@ app.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // RECOMMENDED: Compare hashed password here
+    // const isMatch = await bcrypt.compare(password, user.password);
+    // if (!isMatch) {
+    //   return res.status(401).json({ message: "Invalid password" });
+    // }
     if (user.password !== password) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, secretKey, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id, role: user.role }, secretKey, { expiresIn: '24h' });
 
     res.status(200).json({ token, role: user.role });
   } catch (error) {
@@ -222,7 +281,7 @@ app.get("/addresses/:userId", authenticateToken, async (req, res) => {
   }
 });
 
-// endpoint to store all the orders (UPDATED: default orderStatus to 'Pending')
+// MODIFIED: Endpoint to store all the orders (now sends confirmation email)
 app.post("/orders", authenticateToken, async (req, res) => {
    try {
      const { userId, cartItems, totalPrice, shippingAddress, paymentMethod } = req.body;
@@ -237,7 +296,7 @@ app.post("/orders", authenticateToken, async (req, res) => {
      }
 
      const products = cartItems.map((item) => ({
-       name: item?.title,
+       name: item?.title, // Changed from item?.name to item?.title
        quantity: item.quantity,
        price: item.price,
        image: item?.image,
@@ -249,10 +308,17 @@ app.post("/orders", authenticateToken, async (req, res) => {
       totalPrice: totalPrice,
       shippingAddress: shippingAddress,
       paymentMethod: paymentMethod,
-      orderStatus: 'Pending', // NEW: Set default status to Pending
+      orderStatus: 'Pending', // Default status for new orders
     });
 
     await order.save();
+
+    // NEW: Send order confirmation email after successful order creation
+    if (user.email) {
+      await sendOrderConfirmationEmail(user.email, order); // Pass user's email and saved order details
+    } else {
+      console.warn(`User ${userId} does not have an email to send order confirmation.`);
+    }
 
     res.status(200).json({ message: "Order created successfully!" });
   } catch (error) {
@@ -305,7 +371,7 @@ app.get("/orders/:userId", authenticateToken, async(req,res) => {
 });
 
 
-// --- ADMIN ENDPOINTS (kept as is, but now using orderStatus field) ---
+// --- ADMIN ENDPOINTS ---
 
 app.get("/admin/users", authenticateToken, authorizeAdmin, async (req, res) => {
   try {
@@ -353,7 +419,6 @@ app.delete("/admin/users/:userId", authenticateToken, authorizeAdmin, async (req
   }
 });
 
-// API Update Order Status (Admin) (Already present, now fully functional with enum)
 app.put("/admin/orders/:orderId", authenticateToken, authorizeAdmin, async (req, res) => {
   try {
     const orderId = req.params.orderId;
@@ -380,7 +445,6 @@ app.put("/admin/orders/:orderId", authenticateToken, authorizeAdmin, async (req,
   }
 });
 
-// API Delete Order (Admin) (kept as is)
 app.delete("/admin/orders/:orderId", authenticateToken, authorizeAdmin, async (req, res) => {
   try {
     const orderId = req.params.orderId;
@@ -396,8 +460,6 @@ app.delete("/admin/orders/:orderId", authenticateToken, authorizeAdmin, async (r
   }
 });
 
-
-// NEW: API for user to cancel an order
 app.put("/orders/cancel/:orderId", authenticateToken, async (req, res) => {
   try {
     const orderId = req.params.orderId;
@@ -414,7 +476,7 @@ app.put("/orders/cancel/:orderId", authenticateToken, async (req, res) => {
       return res.status(403).json({ message: "Unauthorized to cancel this order." });
     }
 
-    // Only allow cancellation if the order status is 'Pending'
+    // Only allow cancellation if the order status is 'Pending' or 'Processing'
     if (order.orderStatus !== 'Pending' && order.orderStatus !== 'Processing') {
       return res.status(400).json({ message: `Order cannot be cancelled. Current status: ${order.orderStatus}.` });
     }
@@ -431,9 +493,9 @@ app.put("/orders/cancel/:orderId", authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/admin/orders', async (req, res) => {
+app.get('/admin/orders', authenticateToken, authorizeAdmin, async (req, res) => {
   try {
-    const orders = await Order.find().populate('user');
+    const orders = await Order.find().populate('user', 'name email'); // Populate user's name and email
     res.json({ orders });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch orders.' });
